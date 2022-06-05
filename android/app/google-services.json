@@ -1,0 +1,118 @@
+{
+  "project_info": {
+    "project_number": "62862337284",
+    "project_id": "microcreditmanager-665cf",
+    "storage_bucket": "microcreditmanager-665cf.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:62862337284:android:96c4bbf7555151e7addc51",
+        "android_client_info": {
+          "package_name": "com.mcm.mcm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "62862337284-46aqtikdeje34063tqkhu6m05bg2aqn8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAy1MIkw4nkV8WXqglpxSiTrJzR0K1oifo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "62862337284-46aqtikdeje34063tqkhu6m05bg2aqn8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "62862337284-7b0odldg6ac9qn0nitd40fqmccsuhgbn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.microcreditmanager.microcreditmanagerapp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:62862337284:android:874dbc0e7f9500aaaddc51",
+        "android_client_info": {
+          "package_name": "com.microcreditmanager.mcm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "62862337284-46aqtikdeje34063tqkhu6m05bg2aqn8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAy1MIkw4nkV8WXqglpxSiTrJzR0K1oifo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "62862337284-46aqtikdeje34063tqkhu6m05bg2aqn8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "62862337284-7b0odldg6ac9qn0nitd40fqmccsuhgbn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.microcreditmanager.microcreditmanagerapp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:62862337284:android:1a920679aa6866bbaddc51",
+        "android_client_info": {
+          "package_name": "com.microcreditmanager.microcreditmanagerapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "62862337284-46aqtikdeje34063tqkhu6m05bg2aqn8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAy1MIkw4nkV8WXqglpxSiTrJzR0K1oifo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "62862337284-46aqtikdeje34063tqkhu6m05bg2aqn8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "62862337284-7b0odldg6ac9qn0nitd40fqmccsuhgbn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.microcreditmanager.microcreditmanagerapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
