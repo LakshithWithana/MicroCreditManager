@@ -14,7 +14,7 @@ import 'package:provider/provider.dart';
 import '../reusable_components/text_input_formatters.dart';
 
 class AddNewDeposit extends StatefulWidget {
-  AddNewDeposit({Key? key}) : super(key: key);
+  const AddNewDeposit({Key? key}) : super(key: key);
 
   @override
   State<AddNewDeposit> createState() => _AddNewDepositState();
@@ -208,9 +208,9 @@ class _AddNewDepositState extends State<AddNewDeposit> {
                                     usersCollection
                                         .doc(user.docs.first.id)
                                         .update({
-                                      'capitalAmount':
-                                          userDetails.capitalAmount! +
-                                              int.parse(amountController.text),
+                                      // 'capitalAmount':
+                                      //     userDetails.capitalAmount! +
+                                      //         int.parse(amountController.text),
                                       'totalDeposits':
                                           userDetails.totalDeposits! +
                                               int.parse(amountController.text),
@@ -234,7 +234,7 @@ class _AddNewDepositState extends State<AddNewDeposit> {
               ),
             );
           } else {
-            return Loading();
+            return const Loading();
           }
         });
   }

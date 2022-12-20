@@ -1,17 +1,13 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:form_field_validator/form_field_validator.dart';
 import 'package:intl/intl.dart';
 import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
 import 'package:mcm/reusable_components/custom_text_form_field.dart';
-import 'package:mcm/reusable_components/loading.dart';
 import 'package:mcm/services/auth_services.dart';
 import 'package:mcm/services/database_services.dart';
 import 'package:mcm/shared/colors.dart';
@@ -62,7 +58,7 @@ class _AdminSignUpDetailsState extends State<AdminSignUpDetails> {
   final confirmPasswordController = TextEditingController();
   String? adminId = "";
 
-  var accountUid = Uuid();
+  var accountUid = const Uuid();
   String? accountID = "";
 
   bool? isLoading = false;
@@ -71,82 +67,10 @@ class _AdminSignUpDetailsState extends State<AdminSignUpDetails> {
   var now = DateTime.now();
   var formatter = DateFormat('yyyy-MM-dd');
 
-  Future getImageAndUpload() async {
-    setState(() {
-      isLoading = true;
-    });
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      withData: true,
-      type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg'],
-    );
-    if (result != null) {
-      PlatformFile file = result.files.first;
-
-      print(file.name);
-      print(file.bytes);
-      print(file.size);
-      print(file.extension);
-      print(file.path);
-
-      Uint8List fileBytes = result.files.first.bytes!;
-      String fileName = result.files.first.name;
-
-      // Upload file
-      await FirebaseStorage.instance
-          .ref()
-          .child(
-              '${(ModalRoute.of(context)!.settings.arguments as AdminSignUpDetailsArgs).companyName}/$fileName')
-          .putData(fileBytes)
-          .whenComplete(() => null)
-          .then((value) {
-        print('Upload Completed');
-        value.ref.getDownloadURL().then((value) {
-          updateUrlToFirestore(
-              value,
-              (ModalRoute.of(context)!.settings.arguments
-                      as AdminSignUpDetailsArgs)
-                  .companyName,
-              file.name,
-              file.extension);
-        });
-        setState(() {
-          isLoading = false;
-        });
-      }).catchError((error) {
-        print(error);
-        setState(() {
-          isLoading = false;
-        });
-      });
-    } else {
-      // User canceled the picker
-    }
-  }
-
   bool downloading = true;
   String downloadingStr = "No data";
   double download = 0.0;
   late File f;
-
-  Future updateUrlToFirestore(String fileValue, String? club, String fileName,
-      String? fileExtension) async {
-    return await imagesCollection.doc().set({
-      'url': fileValue,
-      'name': fileName,
-      'type': fileExtension,
-    }).then((value) {
-      setState(() {
-        isLoading = false;
-      });
-    }).catchError((error) {
-      print(error);
-      setState(() {
-        isLoading = false;
-      });
-    });
-  }
 
   Future downloadFile({String? url}) async {
     var docUrl = url!;
@@ -163,9 +87,9 @@ class _AdminSignUpDetailsState extends State<AdminSignUpDetails> {
         setState(() {
           downloading = true;
           download = (rec / total) * 100;
-          print(fileName + ' downloaded');
+          print('$fileName downloaded');
           downloadingStr =
-              "Downloading Image : " + (download).toStringAsFixed(0);
+              "Downloading Image : ${(download).toStringAsFixed(0)}";
         });
         setState(() {
           downloading = false;
@@ -197,11 +121,8 @@ class _AdminSignUpDetailsState extends State<AdminSignUpDetails> {
     }
 
     String? adminIdGenerator(String? countryCode, int? accountCount) {
-      String? adminId = countryCode! +
-          "ADM" +
-          accountCount!.toString() +
-          "-" +
-          (DateTime.now().millisecondsSinceEpoch).toString().substring(8);
+      String? adminId =
+          "${countryCode!}ADM${accountCount!}-${(DateTime.now().millisecondsSinceEpoch).toString().substring(8)}";
       return adminId;
     }
 
@@ -432,7 +353,7 @@ class _AdminSignUpDetailsState extends State<AdminSignUpDetails> {
                                         await depositsCollection.doc().set({
                                           'companyName': args.companyName,
                                           'userId': adminId,
-                                          'customerName': "Initial Capital",
+                                          'customerName': "Initial Deposit",
                                           'amount': args.capitalAmount,
                                           'interestRate': 0.00,
                                           'date': formattedDate,

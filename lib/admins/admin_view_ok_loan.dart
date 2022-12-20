@@ -22,7 +22,7 @@ class AdminViewOkLoanArgs {
 }
 
 class AdminViewOkLoan extends StatefulWidget {
-  AdminViewOkLoan({Key? key}) : super(key: key);
+  const AdminViewOkLoan({Key? key}) : super(key: key);
 
   @override
   State<AdminViewOkLoan> createState() => _AdminViewOkLoanState();
@@ -55,6 +55,13 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
   bool? notPaid = false;
   int? points = 0;
 
+  bool? haveNotifications = false;
+  Object? collectingDatesExtension = {};
+  QueryDocumentSnapshot<Map<String, dynamic>>? loanExtensionRequestSnapshot;
+  Map collectingDatesUpdated = {};
+  List? collectingDatesUpdatedList = [];
+  String? lastCollectingDate = "";
+
   @override
   Widget build(BuildContext context) {
     Size screenSize = MediaQuery.of(context).size;
@@ -77,6 +84,42 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
       });
     }
 
+    checkNotificationsForExtensionRequests(String loanId, String lastDate) {
+      FirebaseFirestore.instance
+          .collection("loanExtentionRequests")
+          .where("loanId", isEqualTo: loanId)
+          .where("status", isEqualTo: "pending")
+          .get()
+          .then((value) {
+        if (value.docs.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              lastCollectingDate = lastDate;
+              loanExtensionRequestSnapshot = value.docs.first;
+              haveNotifications = true;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              haveNotifications = false;
+            });
+          }
+        }
+      });
+    }
+
+    // getLoanLastCollectingDate(String lastDate) {
+    //   if (mounted) {
+    //     setState(() {
+    //       lastCollectingDate = lastDate;
+    //     });
+    //   }
+    // }
+
+    // getLoanLastCollectingDate();
+    // print("last $lastCollectingDate");
+
     return StreamBuilder<UserDetails>(
         stream: DatabaseServices(uid: user!.uid).userDetails,
         builder: (context, snapshot) {
@@ -89,6 +132,398 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                 backgroundColor: Colors.transparent,
                 iconTheme: const IconThemeData(color: mainColor),
                 elevation: 0.0,
+                actions: haveNotifications == true
+                    ? [
+                        Padding(
+                          padding: EdgeInsets.only(right: width * 5.0),
+                          child: IconButton(
+                            onPressed: () {
+                              showModalBottomSheet(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return StatefulBuilder(builder:
+                                        (BuildContext context, setState) {
+                                      return BottomSheet(
+                                        enableDrag: false,
+                                        onClosing: () {
+                                          updated(setState, '');
+                                        },
+                                        builder: (context) {
+                                          return Container(
+                                            height: height * 45,
+                                            color: white,
+                                            child: Padding(
+                                              padding:
+                                                  EdgeInsets.all(width * 5.1),
+                                              child: FutureBuilder(
+                                                future: FirebaseFirestore
+                                                    .instance
+                                                    .collection(
+                                                        "loanExtentionRequests")
+                                                    .where('loanId',
+                                                        isEqualTo: args.loanId)
+                                                    .get(),
+                                                // initialData: InitialData,
+                                                builder: (BuildContext context,
+                                                    AsyncSnapshot snapshot) {
+                                                  if (snapshot.hasData) {
+                                                    final extensionRequest =
+                                                        snapshot
+                                                            .data!.docs.first;
+                                                    return SingleChildScrollView(
+                                                      child: Column(
+                                                        children: [
+                                                          CustomTextBox(
+                                                            textValue:
+                                                                'Customer Request',
+                                                            textSize: 7,
+                                                            textWeight:
+                                                                FontWeight.bold,
+                                                            typeAlign: Alignment
+                                                                .topLeft,
+                                                            captionAlign:
+                                                                TextAlign.left,
+                                                            textColor: black,
+                                                          ),
+                                                          SizedBox(
+                                                              height:
+                                                                  height * 3),
+                                                          CustomTextBox(
+                                                            textValue:
+                                                                "This customer needs to extend the time period",
+                                                            textSize: 5,
+                                                            textWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                            typeAlign: Alignment
+                                                                .topLeft,
+                                                            captionAlign:
+                                                                TextAlign.left,
+                                                            textColor:
+                                                                Colors.grey,
+                                                          ),
+                                                          SizedBox(
+                                                              height:
+                                                                  height * 2),
+                                                          Row(
+                                                            children: [
+                                                              CustomTextBox(
+                                                                textValue:
+                                                                    'Start Date: ',
+                                                                textSize: 5,
+                                                                textWeight:
+                                                                    FontWeight
+                                                                        .normal,
+                                                                typeAlign:
+                                                                    Alignment
+                                                                        .topLeft,
+                                                                captionAlign:
+                                                                    TextAlign
+                                                                        .left,
+                                                                textColor:
+                                                                    black,
+                                                              ),
+                                                              CustomTextBox(
+                                                                textValue:
+                                                                    extensionRequest[
+                                                                        'startingDate'],
+                                                                textSize: 5,
+                                                                textWeight:
+                                                                    FontWeight
+                                                                        .normal,
+                                                                typeAlign:
+                                                                    Alignment
+                                                                        .topLeft,
+                                                                captionAlign:
+                                                                    TextAlign
+                                                                        .left,
+                                                                textColor:
+                                                                    Colors.grey,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          SizedBox(
+                                                              height:
+                                                                  height * 1),
+                                                          Row(
+                                                            children: [
+                                                              CustomTextBox(
+                                                                textValue:
+                                                                    'End Date: ',
+                                                                textSize: 5,
+                                                                textWeight:
+                                                                    FontWeight
+                                                                        .normal,
+                                                                typeAlign:
+                                                                    Alignment
+                                                                        .topLeft,
+                                                                captionAlign:
+                                                                    TextAlign
+                                                                        .left,
+                                                                textColor:
+                                                                    black,
+                                                              ),
+                                                              CustomTextBox(
+                                                                textValue:
+                                                                    extensionRequest[
+                                                                        'endingDate'],
+                                                                textSize: 5,
+                                                                textWeight:
+                                                                    FontWeight
+                                                                        .normal,
+                                                                typeAlign:
+                                                                    Alignment
+                                                                        .topLeft,
+                                                                captionAlign:
+                                                                    TextAlign
+                                                                        .left,
+                                                                textColor:
+                                                                    Colors.grey,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          SizedBox(
+                                                              height:
+                                                                  height * 1),
+                                                          Row(
+                                                            children: [
+                                                              CustomTextBox(
+                                                                textValue:
+                                                                    'Duration: ',
+                                                                textSize: 5,
+                                                                textWeight:
+                                                                    FontWeight
+                                                                        .normal,
+                                                                typeAlign:
+                                                                    Alignment
+                                                                        .topLeft,
+                                                                captionAlign:
+                                                                    TextAlign
+                                                                        .left,
+                                                                textColor:
+                                                                    black,
+                                                              ),
+                                                              CustomTextBox(
+                                                                textValue:
+                                                                    " ${extensionRequest['duration'].toString()} days",
+                                                                textSize: 5,
+                                                                textWeight:
+                                                                    FontWeight
+                                                                        .normal,
+                                                                typeAlign:
+                                                                    Alignment
+                                                                        .topLeft,
+                                                                captionAlign:
+                                                                    TextAlign
+                                                                        .left,
+                                                                textColor:
+                                                                    Colors.grey,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          SizedBox(
+                                                              height:
+                                                                  height * 3),
+                                                          Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceAround,
+                                                            children: [
+                                                              NegativeHalfElevatedButton(
+                                                                label:
+                                                                    "Decline",
+                                                                onPressed:
+                                                                    () async {
+                                                                  await FirebaseFirestore
+                                                                      .instance
+                                                                      .collection(
+                                                                          "loanExtentionRequests")
+                                                                      .where(
+                                                                          "loanId",
+                                                                          isEqualTo: args
+                                                                              .loanId)
+                                                                      .get()
+                                                                      .then(
+                                                                          (value) {
+                                                                    if (value
+                                                                        .docs
+                                                                        .isNotEmpty) {
+                                                                      FirebaseFirestore
+                                                                          .instance
+                                                                          .collection(
+                                                                              "loanExtentionRequests")
+                                                                          .doc(value
+                                                                              .docs
+                                                                              .first
+                                                                              .id)
+                                                                          .delete();
+                                                                    }
+                                                                  });
+                                                                  setstate() {}
+
+                                                                  Navigator.pop(
+                                                                      context);
+                                                                },
+                                                              ),
+                                                              PositiveHalfElevatedButton(
+                                                                label: "Accept",
+                                                                onPressed:
+                                                                    () async {
+                                                                  collectingDatesUpdated =
+                                                                      {
+                                                                    for (var i =
+                                                                            0;
+                                                                        i <
+                                                                            ((loanExtensionRequestSnapshot!.data() as dynamic)['duration'] +
+                                                                                1);
+                                                                        i++)
+                                                                      formatter.format(DateTime(
+                                                                          int.parse(lastCollectingDate!
+                                                                              .split(
+                                                                                  '-')
+                                                                              .first),
+                                                                          int.parse(lastCollectingDate!.split('-')[
+                                                                              1]),
+                                                                          int.parse(lastCollectingDate!.split('-').last) +
+                                                                              i)): 0.00,
+                                                                  };
+
+                                                                  for (var i =
+                                                                          0;
+                                                                      i <
+                                                                          ((loanExtensionRequestSnapshot!.data()
+                                                                              as dynamic)['duration']);
+                                                                      i++) {
+                                                                    collectingDatesUpdatedList!.add(formatter.format(DateTime(
+                                                                        int.parse(((loanExtensionRequestSnapshot!.data() as dynamic)['startingDate'])
+                                                                            .split(
+                                                                                '-')
+                                                                            .first),
+                                                                        int.parse(((loanExtensionRequestSnapshot!.data() as dynamic)['startingDate']).split('-')[
+                                                                            1]),
+                                                                        int.parse(((loanExtensionRequestSnapshot!.data() as dynamic)['startingDate']).split('-').last) +
+                                                                            i)));
+                                                                  }
+                                                                  await loanRequestsCollection
+                                                                      .doc(args
+                                                                          .loanId)
+                                                                      .set({
+                                                                    "extentionStartDate":
+                                                                        (loanExtensionRequestSnapshot!.data()
+                                                                            as dynamic)['startingDate'],
+                                                                    "extentionEndDate":
+                                                                        (loanExtensionRequestSnapshot!.data()
+                                                                            as dynamic)['endingDate'],
+                                                                    "extentionDuration":
+                                                                        (loanExtensionRequestSnapshot!.data()
+                                                                            as dynamic)['duration'],
+                                                                    "collectingDates":
+                                                                        collectingDatesUpdated,
+                                                                    "extendedDates":
+                                                                        FieldValue.arrayUnion(
+                                                                            collectingDatesUpdatedList!),
+                                                                  }, SetOptions(merge: true));
+
+                                                                  await FirebaseFirestore
+                                                                      .instance
+                                                                      .collection(
+                                                                          "loanExtentionRequests")
+                                                                      .where(
+                                                                          "loanId",
+                                                                          isEqualTo: args
+                                                                              .loanId)
+                                                                      .get()
+                                                                      .then(
+                                                                          (value) {
+                                                                    if (value
+                                                                        .docs
+                                                                        .isNotEmpty) {
+                                                                      FirebaseFirestore
+                                                                          .instance
+                                                                          .collection(
+                                                                              "loanExtentionRequests")
+                                                                          .doc(value
+                                                                              .docs
+                                                                              .first
+                                                                              .id)
+                                                                          .delete();
+                                                                    }
+                                                                  });
+                                                                  setstate() {}
+                                                                  Navigator.pop(
+                                                                      context);
+                                                                },
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  } else {
+                                                    return const Center(
+                                                        child:
+                                                            CircularProgressIndicator());
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    });
+                                  });
+                            },
+                            icon: Icon(
+                              Icons.notifications,
+                              color: red,
+                              size: width * 10,
+                            ),
+                          ),
+                        ),
+                      ]
+                    : [
+                        Padding(
+                          padding: EdgeInsets.only(right: width * 5.0),
+                          child: IconButton(
+                            onPressed: () {
+                              showModalBottomSheet(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return StatefulBuilder(builder:
+                                        (BuildContext context, setState) {
+                                      return BottomSheet(
+                                        onClosing: () {},
+                                        builder: (context) {
+                                          return Container(
+                                            height: height * 10,
+                                            color: white,
+                                            child: Padding(
+                                              padding:
+                                                  EdgeInsets.all(width * 5.1),
+                                              child: CustomTextBox(
+                                                textValue:
+                                                    "No new notifications.",
+                                                textSize: 4,
+                                                textWeight: FontWeight.normal,
+                                                typeAlign: Alignment.topLeft,
+                                                captionAlign: TextAlign.left,
+                                                textColor: black,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    });
+                                  });
+                            },
+                            icon: Icon(
+                              Icons.notifications_outlined,
+                              color: black,
+                              size: width * 10,
+                            ),
+                          ),
+                        ),
+                      ],
               ),
               body: StreamBuilder(
                 stream: loanRequestsCollection.doc(args.loanId).snapshots(),
@@ -105,6 +540,14 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                     });
 
                     List notPaidDates = loan['notPaidDates'];
+                    List extendedDates = loan['extendedDates'];
+
+                    // print("last $lastCollectingDate");
+
+                    // getLoanLastCollectingDate(collectionHistoryList.last.key);
+
+                    checkNotificationsForExtensionRequests(
+                        args.loanId!, collectionHistoryList.last.key);
 
                     return Padding(
                       padding:
@@ -269,9 +712,7 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                         ),
                                         CustomTextBox(
                                           textValue:
-                                              int.parse(loan['interestRate'])
-                                                      .toStringAsFixed(2) +
-                                                  " %",
+                                              "${int.parse(loan['interestRate']).toStringAsFixed(2)} %",
                                           textSize: 4.0,
                                           textWeight: FontWeight.normal,
                                           typeAlign: Alignment.topLeft,
@@ -379,17 +820,8 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                         CustomTextBox(
                                           textValue: loan['loanType'] ==
                                                   "Monthly"
-                                              ? "x " +
-                                                  (int.parse((loan['duration'])!
-                                                          .split(' ')
-                                                          .first))
-                                                      .toString()
-                                              : "x " +
-                                                  (int.parse((loan['duration'])!
-                                                              .split(' ')
-                                                              .first) *
-                                                          30)
-                                                      .toString(),
+                                              ? "x ${int.parse((loan['duration'])!.split(' ').first)}"
+                                              : "x ${int.parse((loan['duration'])!.split(' ').first) * 30}",
                                           textSize: 4.0,
                                           textWeight: FontWeight.normal,
                                           typeAlign: Alignment.topLeft,
@@ -405,6 +837,32 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                       children: [
                                         CustomTextBox(
                                           textValue: 'Total',
+                                          textSize: 4.5,
+                                          textWeight: FontWeight.normal,
+                                          typeAlign: Alignment.topLeft,
+                                          captionAlign: TextAlign.left,
+                                          textColor: black,
+                                        ),
+                                        CustomTextBox(
+                                          textValue: loan['currency'] +
+                                              " " +
+                                              loan['totalCollection']
+                                                  .toStringAsFixed(2),
+                                          textSize: 4.5,
+                                          textWeight: FontWeight.normal,
+                                          typeAlign: Alignment.topLeft,
+                                          captionAlign: TextAlign.left,
+                                          textColor: green!,
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: height * 1),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        CustomTextBox(
+                                          textValue: 'Balance',
                                           textSize: 5.0,
                                           textWeight: FontWeight.bold,
                                           typeAlign: Alignment.topLeft,
@@ -414,7 +872,7 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                         CustomTextBox(
                                           textValue: loan['currency'] +
                                               " " +
-                                              loan['totalCollection']
+                                              (loan['balance'])
                                                   .toStringAsFixed(2),
                                           textSize: 5.0,
                                           textWeight: FontWeight.bold,
@@ -448,8 +906,11 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                       textColor: black,
                                     ),
                                     SizedBox(height: height * 2),
-                                    getRowWidget(collectionHistoryList,
-                                        notPaidDates, formattedDate),
+                                    getRowWidget(
+                                        collectionHistoryList,
+                                        notPaidDates,
+                                        formattedDate,
+                                        extendedDates),
                                   ],
                                 ),
                               ),
@@ -468,174 +929,208 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                       return StatefulBuilder(builder:
                                           (BuildContext context, setState) {
                                         return BottomSheet(
+                                          enableDrag: false,
                                           onClosing: () {
                                             updated(setState, '');
                                           },
                                           builder: (context) {
                                             return Container(
-                                              height: height * 100,
+                                              height: height * 150,
                                               color: white,
                                               child: Padding(
                                                 padding:
                                                     EdgeInsets.all(width * 5.1),
-                                                child: Column(
-                                                  children: [
-                                                    CustomTextBox(
-                                                      textValue: 'Collect',
-                                                      textSize: 7,
-                                                      textWeight:
-                                                          FontWeight.bold,
-                                                      typeAlign:
-                                                          Alignment.topLeft,
-                                                      captionAlign:
-                                                          TextAlign.left,
-                                                      textColor: black,
-                                                    ),
-                                                    SizedBox(
-                                                        height: height * 3),
-                                                    CustomTextFormField(
-                                                      enabled: !notPaid!,
-                                                      label:
-                                                          'Amount (last CR ${loan['currency']} ${loan['extraChange']})',
-                                                      // controller: amountController,
-                                                      initialValue: "0",
-                                                      onChanged: (value) {
-                                                        amount = value;
-                                                      },
-                                                      inputFormatters: <
-                                                          TextInputFormatter>[
-                                                        FilteringTextInputFormatter
-                                                            .digitsOnly
-                                                      ],
-                                                    ),
-                                                    SizedBox(
-                                                        height: height * 1),
-                                                    CustomTextFormField(
-                                                      label: 'Date',
-                                                      controller:
-                                                          dateController,
-                                                      initialValue:
-                                                          formattedDate,
-                                                      readOnly: true,
-                                                    ),
-                                                    CustomTextBox(
-                                                      textValue: error!,
-                                                      textSize: 4,
-                                                      textWeight:
-                                                          FontWeight.normal,
-                                                      typeAlign:
-                                                          Alignment.topLeft,
-                                                      captionAlign:
-                                                          TextAlign.left,
-                                                      textColor: red,
-                                                    ),
-                                                    CustomCheckBox(
-                                                      textField: "Not paid",
-                                                      initValue: notPaid,
-                                                      onChanged: (value) {
-                                                        setState(() {
-                                                          notPaid = value;
-                                                          value == true
-                                                              ? amount = (loan[
-                                                                          'monthlyCollection'] -
-                                                                      loan[
-                                                                          'extraChange'])
-                                                                  .toString()
-                                                              : amount = "0";
-                                                        });
-                                                        print(amount);
-                                                      },
-                                                    ),
-                                                    SizedBox(
-                                                        height: height * 3),
-                                                    PositiveElevatedButton(
-                                                      label: 'Collect',
-                                                      onPressed: () async {
-                                                        // check from top of the list -----------------
-                                                        // int? falseIndex =
-                                                        //     collectionHistoryList
-                                                        //         .indexWhere(
-                                                        //             (element) =>
-                                                        //                 element
-                                                        //                     .value ==
-                                                        //                 false);
+                                                child: SingleChildScrollView(
+                                                  child: Column(
+                                                    children: [
+                                                      CustomTextBox(
+                                                        textValue: 'Collect',
+                                                        textSize: 7,
+                                                        textWeight:
+                                                            FontWeight.bold,
+                                                        typeAlign:
+                                                            Alignment.topLeft,
+                                                        captionAlign:
+                                                            TextAlign.left,
+                                                        textColor: black,
+                                                      ),
+                                                      SizedBox(
+                                                          height: height * 3),
+                                                      CustomTextFormField(
+                                                        enabled: !notPaid!,
+                                                        label:
+                                                            'Amount (Due Amount ${loan['currency']} ${loan['totalCollection'] - loan['collectedMoney']})',
+                                                        // controller: amountController,
+                                                        initialValue: "0",
+                                                        onChanged: (value) {
+                                                          amount = value;
+                                                        },
+                                                        inputFormatters: <
+                                                            TextInputFormatter>[
+                                                          FilteringTextInputFormatter
+                                                              .digitsOnly
+                                                        ],
+                                                      ),
+                                                      (((double.parse(amount!) -
+                                                                      (loan['totalCollection'] -
+                                                                          loan[
+                                                                              'collectedMoney'])) >
+                                                                  0) &&
+                                                              (double.parse(
+                                                                      amount!) !=
+                                                                  null))
+                                                          ? CustomTextBox(
+                                                              textValue:
+                                                                  "Change ${loan['currency']} ${double.parse(amount!) - (loan['totalCollection'] - loan['collectedMoney'])}",
+                                                              textSize: 4,
+                                                              textWeight:
+                                                                  FontWeight
+                                                                      .normal,
+                                                              typeAlign:
+                                                                  Alignment
+                                                                      .topLeft,
+                                                              captionAlign:
+                                                                  TextAlign
+                                                                      .left,
+                                                              textColor: red,
+                                                            )
+                                                          : const SizedBox(),
+                                                      SizedBox(
+                                                          height: height * 1),
+                                                      CustomTextFormField(
+                                                        label: 'Date',
+                                                        controller:
+                                                            dateController,
+                                                        initialValue:
+                                                            formattedDate,
+                                                        readOnly: true,
+                                                      ),
+                                                      CustomTextBox(
+                                                        textValue: error!,
+                                                        textSize: 4,
+                                                        textWeight:
+                                                            FontWeight.normal,
+                                                        typeAlign:
+                                                            Alignment.topLeft,
+                                                        captionAlign:
+                                                            TextAlign.left,
+                                                        textColor: red,
+                                                      ),
+                                                      CustomCheckBox(
+                                                        textField: "Not paid",
+                                                        initValue: notPaid,
+                                                        onChanged: (value) {
+                                                          setState(() {
+                                                            notPaid = value;
+                                                            value == true
+                                                                ? amount = (loan[
+                                                                            'monthlyCollection'] -
+                                                                        loan[
+                                                                            'extraChange'])
+                                                                    .toString()
+                                                                : amount = "0";
+                                                          });
+                                                          print(amount);
+                                                        },
+                                                      ),
+                                                      SizedBox(
+                                                          height: height * 3),
+                                                      PositiveElevatedButton(
+                                                        label: 'Collect',
+                                                        onPressed: () async {
+                                                          // check from top of the list -----------------
+                                                          // int? falseIndex =
+                                                          //     collectionHistoryList
+                                                          //         .indexWhere(
+                                                          //             (element) =>
+                                                          //                 element
+                                                          //                     .value ==
+                                                          //                 false);
 
-                                                        // int? todayIndex =
-                                                        //     collectionHistoryList
-                                                        //         .indexWhere(
-                                                        //             (element) =>
-                                                        //                 element
-                                                        //                     .key ==
-                                                        //                 '2022-02-27');
-                                                        // print(falseIndex);
-                                                        // print(todayIndex);
-                                                        // print(
-                                                        //     collectionHistoryList
-                                                        //         .sublist(
-                                                        //             0,
-                                                        //             falseIndex +
-                                                        //                 1));
-                                                        //-----------------------------------------
-                                                        // check from current day to top ----------
-                                                        // if (loan['collectingDates'][formatter.format(DateTime(
-                                                        //         int.parse(fDate
-                                                        //             .split("-")
-                                                        //             .first),
-                                                        //         int.parse(
-                                                        //             fDate.split(
-                                                        //                     "-")[
-                                                        //                 1]),
-                                                        //         int.parse(fDate
-                                                        //                 .split(
-                                                        //                     "-")
-                                                        //                 .last) -
-                                                        //             1))] ==
-                                                        //     false) {
-                                                        //   print("false");
-                                                        // }
+                                                          // int? todayIndex =
+                                                          //     collectionHistoryList
+                                                          //         .indexWhere(
+                                                          //             (element) =>
+                                                          //                 element
+                                                          //                     .key ==
+                                                          //                 '2022-02-27');
+                                                          // print(falseIndex);
+                                                          // print(todayIndex);
+                                                          // print(
+                                                          //     collectionHistoryList
+                                                          //         .sublist(
+                                                          //             0,
+                                                          //             falseIndex +
+                                                          //                 1));
+                                                          //-----------------------------------------
+                                                          // check from current day to top ----------
+                                                          // if (loan['collectingDates'][formatter.format(DateTime(
+                                                          //         int.parse(fDate
+                                                          //             .split("-")
+                                                          //             .first),
+                                                          //         int.parse(
+                                                          //             fDate.split(
+                                                          //                     "-")[
+                                                          //                 1]),
+                                                          //         int.parse(fDate
+                                                          //                 .split(
+                                                          //                     "-")
+                                                          //                 .last) -
+                                                          //             1))] ==
+                                                          //     false) {
+                                                          //   print("false");
+                                                          // }
 
-                                                        //------------------------------------------
-                                                        if (loan[
-                                                                'acceptedDate'] ==
-                                                            formattedDate) {
-                                                          updated(setState,
-                                                              'Loan Collection will be start from tomorrow.');
-                                                        } else {
-                                                          collectingDates = loan[
-                                                              'collectingDates'];
+                                                          //------------------------------------------
+                                                          if (loan[
+                                                                  'acceptedDate'] ==
+                                                              formattedDate) {
+                                                            updated(setState,
+                                                                'Loan Collection will be start from tomorrow.');
+                                                          } else {
+                                                            collectingDates = loan[
+                                                                'collectingDates'];
 
-                                                          print(double.parse(
-                                                              amount!));
-                                                          print((loan[
-                                                                  'monthlyCollection'] -
-                                                              loan[
-                                                                  'extraChange']));
-                                                          if (double.parse(
-                                                                  amount!) >=
-                                                              (loan['monthlyCollection'] -
-                                                                  loan[
-                                                                      'extraChange'])) {
+                                                            print(double.parse(
+                                                                amount!));
+                                                            print((loan[
+                                                                    'monthlyCollection'] -
+                                                                loan[
+                                                                    'extraChange']));
+                                                            // if (double.parse(
+                                                            //         amount!) >=
+                                                            //     (loan['monthlyCollection'] -
+                                                            //         loan[
+                                                            //             'extraChange'])) {
                                                             print('passed 1');
                                                             updated(
                                                                 setState, '');
-                                                            setState(() {
-                                                              extraChange = roundDouble(
-                                                                  (double.parse(
-                                                                          amount!) +
-                                                                      loan[
-                                                                          'extraChange'] -
-                                                                      (loan[
-                                                                          'monthlyCollection'])),
-                                                                  2);
-                                                            });
+                                                            // setState(() {
+                                                            //   extraChange = roundDouble(
+                                                            //       (double.parse(
+                                                            //               amount!) +
+                                                            //           loan[
+                                                            //               'extraChange'] -
+                                                            //           (loan[
+                                                            //               'monthlyCollection'])),
+                                                            //       2);
+                                                            // });
 
                                                             if (loan[
                                                                     'loanType'] ==
                                                                 "Daily") {
-                                                              if (loan['collectingDates']
-                                                                      [
-                                                                      formattedDate] ==
-                                                                  false) {
+                                                              // if (loan['collectingDates']
+                                                              //         [
+                                                              //         formattedDate] ==
+                                                              //     0) {
+                                                              if (loan[
+                                                                      'extendedDates']
+                                                                  .contains(
+                                                                      formattedDate)) {
+                                                                updated(
+                                                                    setState,
+                                                                    'Today is marked as extended date.');
+                                                              } else {
                                                                 if (loan[
                                                                         'notPaidDates']
                                                                     .contains(
@@ -649,67 +1144,135 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                     updated(
                                                                         setState,
                                                                         '');
-                                                                    if ((loan['collectingDates'][formattedDate] !=
-                                                                            null) &&
-                                                                        (loan['collectingDates'][formattedDate] ==
-                                                                            false)) {
-                                                                      collectingDates[
-                                                                              formattedDate] =
-                                                                          true;
-                                                                      print(
-                                                                          collectingDates);
-                                                                      await loanRequestsCollection
-                                                                          .doc(loan!
-                                                                              .id)
-                                                                          .update({
-                                                                        'collectingDates':
-                                                                            collectingDates,
-                                                                        'extraChange':
-                                                                            extraChange
-                                                                      });
-                                                                      await usersCollection
-                                                                          .where(
-                                                                              'companyName',
-                                                                              isEqualTo: loan[
-                                                                                  'companyName'])
-                                                                          .where(
-                                                                              'isAdmin',
-                                                                              isEqualTo:
-                                                                                  true)
-                                                                          .get()
-                                                                          .then(
-                                                                              (user) async {
-                                                                        print(user
-                                                                            .docs
-                                                                            .first
-                                                                            .id);
-                                                                        await usersCollection
-                                                                            .doc(user.docs.first.id)
-                                                                            .update({
-                                                                          'capitalAmount':
-                                                                              userDetails!.capitalAmount! + loan['monthlyCollection'],
-                                                                          'collectionTotal':
-                                                                              loan['monthlyCollection'] + userDetails.collectionTotal!,
-                                                                        });
 
-                                                                        await transactionsCollection
-                                                                            .doc(user.docs.first.id)
+                                                                    if ((loan['collectedMoney'] +
+                                                                            double.parse(
+                                                                                amount!)) >
+                                                                        loan[
+                                                                            'totalCollection']) {
+                                                                      showModalBottomSheet(
+                                                                          context:
+                                                                              context,
+                                                                          builder:
+                                                                              (BuildContext context) {
+                                                                            return BottomSheet(
+                                                                                onClosing: () {},
+                                                                                builder: (context) {
+                                                                                  return SizedBox(
+                                                                                    height: 200,
+                                                                                    child: Padding(
+                                                                                      padding: EdgeInsets.all(width * 5.1),
+                                                                                      child: Column(
+                                                                                        children: [
+                                                                                          CustomTextBox(
+                                                                                            textValue: 'Oops!',
+                                                                                            textSize: 5,
+                                                                                            textWeight: FontWeight.bold,
+                                                                                            typeAlign: Alignment.center,
+                                                                                            captionAlign: TextAlign.left,
+                                                                                            textColor: black,
+                                                                                          ),
+                                                                                          SizedBox(height: height * 3),
+                                                                                          CustomTextBox(
+                                                                                            textValue: "${loan['currency']} ${loan['totalCollection'] - loan['collectedMoney']} should be collected to close this loan.",
+                                                                                            textSize: 4,
+                                                                                            textWeight: FontWeight.normal,
+                                                                                            typeAlign: Alignment.topLeft,
+                                                                                            captionAlign: TextAlign.left,
+                                                                                            textColor: black,
+                                                                                          ),
+                                                                                          const SizedBox(height: 20),
+                                                                                          PositiveHalfElevatedButton(
+                                                                                            label: "Ok",
+                                                                                            onPressed: () {
+                                                                                              Navigator.pop(context);
+                                                                                            },
+                                                                                          ),
+                                                                                        ],
+                                                                                      ),
+                                                                                    ),
+                                                                                  );
+                                                                                });
+                                                                          });
+                                                                    } else {
+                                                                      if ((loan['collectingDates'][formattedDate] !=
+                                                                              null)
+                                                                          //     &&
+                                                                          // (loan['collectingDates'][formattedDate] ==
+                                                                          //     0)
+                                                                          ) {
+                                                                        collectingDates[formattedDate] =
+                                                                            FieldValue.increment(double.parse(amount!));
+                                                                        print(
+                                                                            collectingDates);
+                                                                        await loanRequestsCollection
+                                                                            .doc(loan!.id)
                                                                             .update({
-                                                                          'collection':
-                                                                              FieldValue.arrayUnion([
-                                                                            {
-                                                                              'amount': loan['monthlyCollection'],
-                                                                              'date': formattedDate,
-                                                                              'loanId': loan!.id,
-                                                                              'collector': userDetails.firstName,
-                                                                              'loanUser': loan['userName'],
-                                                                              'profit': loan['monthlyInterest'],
-                                                                            },
-                                                                          ]),
+                                                                          'collectingDates':
+                                                                              collectingDates,
+                                                                          'balance':
+                                                                              FieldValue.increment(-double.parse(amount!)),
+                                                                          // 'extraChange':
+                                                                          //     extraChange
                                                                         });
-                                                                        Navigator.pop(
-                                                                            context);
-                                                                      });
+                                                                        await usersCollection
+                                                                            .where('companyName',
+                                                                                isEqualTo: loan['companyName'])
+                                                                            .where('isAdmin', isEqualTo: true)
+                                                                            .get()
+                                                                            .then((user) async {
+                                                                          print(user
+                                                                              .docs
+                                                                              .first
+                                                                              .id);
+                                                                          await usersCollection
+                                                                              .doc(user.docs.first.id)
+                                                                              .update({
+                                                                            // 'capitalAmount':
+                                                                            //     userDetails!.capitalAmount! +
+                                                                            //         loan['monthlyCollection'],
+                                                                            // 'capitalAmount': userDetails!.capitalAmount! + double.parse(amount!),
+                                                                            // 'collectionTotal':
+                                                                            //     loan['monthlyCollection'] +
+                                                                            //         userDetails.collectionTotal!,
+                                                                            'collectionTotal':
+                                                                                double.parse(amount!) + userDetails!.collectionTotal!,
+                                                                          });
+
+                                                                          await transactionsCollection
+                                                                              .doc(user.docs.first.id)
+                                                                              .update({
+                                                                            'collection':
+                                                                                FieldValue.arrayUnion([
+                                                                              {
+                                                                                // 'amount':
+                                                                                //     loan['monthlyCollection'],
+                                                                                'amount': double.parse(amount!),
+                                                                                'date': formattedDate,
+                                                                                'loanId': loan!.id,
+                                                                                'collector': userDetails.firstName,
+                                                                                'loanUser': loan['userName'],
+                                                                                'profit': (loan['totalInterest'] / loan['totalCollection']) * double.parse(amount!),
+                                                                              },
+                                                                            ]),
+                                                                          });
+
+                                                                          await loanMoneyCollectionCollection
+                                                                              .doc()
+                                                                              .set({
+                                                                            'amount':
+                                                                                double.parse(amount!),
+                                                                            'date':
+                                                                                formattedDate,
+                                                                            'loanId':
+                                                                                loan!.id,
+                                                                            'companyName':
+                                                                                loan['companyName'],
+                                                                          });
+                                                                          Navigator.pop(
+                                                                              context);
+                                                                        });
+                                                                      }
                                                                     }
                                                                   } else {
                                                                     await usersCollection
@@ -768,12 +1331,14 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                         context);
                                                                   }
                                                                 }
-                                                                //TODO: add here
-                                                              } else {
-                                                                updated(
-                                                                    setState,
-                                                                    'Already paid');
                                                               }
+
+                                                              //TODO: add here
+                                                              // } else {
+                                                              //   updated(
+                                                              //       setState,
+                                                              //       'Already paid');
+                                                              // }
                                                             } else {
                                                               if ((loan['collectingDates']
                                                                       [
@@ -781,8 +1346,7 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                   null)) {
                                                                 print("run 1");
                                                                 collectingDates[
-                                                                        formattedDate] =
-                                                                    true;
+                                                                    formattedDate] = 0;
                                                                 // print(collectingDates);
                                                                 await loanRequestsCollection
                                                                     .doc(loan!
@@ -791,7 +1355,11 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                   'collectingDates':
                                                                       collectingDates,
                                                                   'extraChange':
-                                                                      extraChange
+                                                                      extraChange,
+                                                                  'balance': FieldValue
+                                                                      .increment(
+                                                                          -double.parse(
+                                                                              amount!)),
                                                                 });
                                                                 await usersCollection
                                                                     .where(
@@ -805,26 +1373,27 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                             true)
                                                                     .get()
                                                                     .then(
-                                                                        (user) {
-                                                                  usersCollection
+                                                                        (user) async {
+                                                                  await usersCollection
                                                                       .doc(user
                                                                           .docs
                                                                           .first
                                                                           .id)
                                                                       .update({
-                                                                    'capitalAmount':
-                                                                        userDetails!.capitalAmount! +
-                                                                            loan['monthlyCollection'],
-                                                                    'collectionTotal': loan[
-                                                                            'monthlyCollection'] +
-                                                                        userDetails
+                                                                    // 'capitalAmount': userDetails!
+                                                                    //         .capitalAmount! +
+                                                                    //     double.parse(
+                                                                    //         amount!),
+                                                                    'collectionTotal': double.parse(
+                                                                            amount!) +
+                                                                        userDetails!
                                                                             .collectionTotal!,
                                                                     'collection':
                                                                         FieldValue
                                                                             .arrayUnion([
                                                                       {
                                                                         'amount':
-                                                                            loan['monthlyCollection'],
+                                                                            double.parse(amount!),
                                                                         'date':
                                                                             formattedDate,
                                                                         'loanId':
@@ -834,9 +1403,25 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                         'loanUser':
                                                                             loan['userName'],
                                                                         'profit':
-                                                                            loan['monthlyInterest'],
+                                                                            (loan['totalInterest'] / loan['totalCollection']) *
+                                                                                double.parse(amount!),
                                                                       },
                                                                     ]),
+                                                                  });
+                                                                  await loanMoneyCollectionCollection
+                                                                      .doc()
+                                                                      .set({
+                                                                    'amount': double
+                                                                        .parse(
+                                                                            amount!),
+                                                                    'date':
+                                                                        formattedDate,
+                                                                    'loanId':
+                                                                        loan!
+                                                                            .id,
+                                                                    'companyName':
+                                                                        loan[
+                                                                            'companyName'],
                                                                   });
                                                                 });
                                                               } else {
@@ -875,11 +1460,8 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                           entryDay))) {
                                                                     print(
                                                                         "run 2");
-                                                                    print("a" +
-                                                                        formatter.format(DateTime(
-                                                                            entryYear,
-                                                                            entryMonth,
-                                                                            entryDay)));
+                                                                    print(
+                                                                        "a${formatter.format(DateTime(entryYear, entryMonth, entryDay))}");
 
                                                                     setState(
                                                                         () {
@@ -898,12 +1480,12 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                 if (collectingDates[
                                                                         formatter
                                                                             .format(dateList![0])] ==
-                                                                    false) {
+                                                                    0) {
                                                                   //TODO:
                                                                   collectingDates[
-                                                                      formatter.format(
-                                                                          dateList![
-                                                                              0])] = true;
+                                                                          formatter
+                                                                              .format(dateList![0])] !=
+                                                                      0;
                                                                   print(
                                                                       "run 3");
                                                                   await loanRequestsCollection
@@ -913,7 +1495,10 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                     'collectingDates':
                                                                         collectingDates,
                                                                     'extraChange':
-                                                                        extraChange
+                                                                        extraChange,
+                                                                    'balance': FieldValue
+                                                                        .increment(
+                                                                            -double.parse(amount!)),
                                                                   });
                                                                   await usersCollection
                                                                       .where(
@@ -926,26 +1511,27 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                               true)
                                                                       .get()
                                                                       .then(
-                                                                          (user) {
-                                                                    usersCollection
+                                                                          (user) async {
+                                                                    await usersCollection
                                                                         .doc(user
                                                                             .docs
                                                                             .first
                                                                             .id)
                                                                         .update({
-                                                                      'capitalAmount':
-                                                                          userDetails!.capitalAmount! +
-                                                                              loan['monthlyCollection'],
-                                                                      'collectionTotal': loan[
-                                                                              'monthlyCollection'] +
-                                                                          userDetails
+                                                                      // 'capitalAmount': userDetails!
+                                                                      //         .capitalAmount! +
+                                                                      //     double.parse(
+                                                                      //         amount!),
+                                                                      'collectionTotal': double.parse(
+                                                                              amount!) +
+                                                                          userDetails!
                                                                               .collectionTotal!,
                                                                       'collection':
                                                                           FieldValue
                                                                               .arrayUnion([
                                                                         {
                                                                           'amount':
-                                                                              loan['monthlyCollection'],
+                                                                              double.parse(amount!),
                                                                           'date':
                                                                               formattedDate,
                                                                           'loanId':
@@ -955,9 +1541,24 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                           'loanUser':
                                                                               loan['userName'],
                                                                           'profit':
-                                                                              loan['monthlyInterest'],
+                                                                              (loan['totalInterest'] / loan['totalCollection']) * double.parse(amount!),
                                                                         },
                                                                       ]),
+                                                                    });
+                                                                    await loanMoneyCollectionCollection
+                                                                        .doc()
+                                                                        .set({
+                                                                      'amount':
+                                                                          double.parse(
+                                                                              amount!),
+                                                                      'date':
+                                                                          formattedDate,
+                                                                      'loanId':
+                                                                          loan!
+                                                                              .id,
+                                                                      'companyName':
+                                                                          loan[
+                                                                              'companyName'],
                                                                     });
                                                                   });
                                                                 } else {
@@ -967,14 +1568,15 @@ class _AdminViewOkLoanState extends State<AdminViewOkLoan> {
                                                                 }
                                                               }
                                                             }
-                                                          } else {
-                                                            updated(setState,
-                                                                'Insufficient ammount');
+                                                            // } else {
+                                                            //   updated(setState,
+                                                            //       'Insufficient ammount');
+                                                            // }
                                                           }
-                                                        }
-                                                      },
-                                                    ),
-                                                  ],
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
                                             );
@@ -1008,7 +1610,7 @@ double roundDouble(double value, int places) {
 }
 
 Widget getRowWidget(List<MapEntry<String, dynamic>> singleRow,
-    List notPaidDates, String? currentDate) {
+    List notPaidDates, String? currentDate, List extendedDates) {
   return Column(
       children: singleRow
           .map(
@@ -1022,7 +1624,11 @@ Widget getRowWidget(List<MapEntry<String, dynamic>> singleRow,
                         textWeight: FontWeight.bold,
                         typeAlign: Alignment.topLeft,
                         captionAlign: TextAlign.left,
-                        textColor: black,
+                        textColor: notPaidDates.contains(item.key)
+                            ? red
+                            : extendedDates.contains(item.key)
+                                ? Colors.yellow.shade700
+                                : black,
                       )
                     : CustomTextBox(
                         textValue: item.key,
@@ -1030,61 +1636,97 @@ Widget getRowWidget(List<MapEntry<String, dynamic>> singleRow,
                         textWeight: FontWeight.normal,
                         typeAlign: Alignment.topLeft,
                         captionAlign: TextAlign.left,
-                        textColor: black,
+                        textColor: notPaidDates.contains(item.key)
+                            ? red
+                            : extendedDates.contains(item.key)
+                                ? Colors.yellow.shade700
+                                : black,
                       ),
-                item.value == false && notPaidDates.contains(item.key)
-                    ? item.key == currentDate
-                        ? CustomTextBox(
-                            textValue: 'Not Paid',
-                            textSize: 4.5,
-                            textWeight: FontWeight.bold,
-                            typeAlign: Alignment.topLeft,
-                            captionAlign: TextAlign.left,
-                            textColor: red,
-                          )
-                        : CustomTextBox(
-                            textValue: 'Not Paid',
-                            textSize: 4.0,
-                            textWeight: FontWeight.normal,
-                            typeAlign: Alignment.topLeft,
-                            captionAlign: TextAlign.left,
-                            textColor: red,
-                          )
-                    : item.value == false
-                        ? item.key == currentDate
-                            ? CustomTextBox(
-                                textValue: "Awaiting",
-                                textSize: 4.5,
-                                textWeight: FontWeight.bold,
-                                typeAlign: Alignment.topLeft,
-                                captionAlign: TextAlign.left,
-                                textColor: black,
-                              )
-                            : CustomTextBox(
-                                textValue: "Awaiting",
-                                textSize: 4.0,
-                                textWeight: FontWeight.normal,
-                                typeAlign: Alignment.topLeft,
-                                captionAlign: TextAlign.left,
-                                textColor: black,
-                              )
-                        : item.key == currentDate
-                            ? CustomTextBox(
-                                textValue: "Paid",
-                                textSize: 4.5,
-                                textWeight: FontWeight.bold,
-                                typeAlign: Alignment.topLeft,
-                                captionAlign: TextAlign.left,
-                                textColor: green!,
-                              )
-                            : CustomTextBox(
-                                textValue: "Paid",
-                                textSize: 4.0,
-                                textWeight: FontWeight.normal,
-                                typeAlign: Alignment.topLeft,
-                                captionAlign: TextAlign.left,
-                                textColor: green!,
-                              ),
+
+                item.key == currentDate
+                    ? CustomTextBox(
+                        textValue: notPaidDates.contains(item.key)
+                            ? "Not Paid"
+                            : item.value.toString(),
+                        textSize: 4.5,
+                        textWeight: FontWeight.bold,
+                        typeAlign: Alignment.topLeft,
+                        captionAlign: TextAlign.left,
+                        textColor: notPaidDates.contains(item.key)
+                            ? red
+                            : extendedDates.contains(item.key)
+                                ? Colors.yellow.shade700
+                                : black,
+                      )
+                    : CustomTextBox(
+                        textValue: notPaidDates.contains(item.key)
+                            ? "Not Paid"
+                            : item.value.toString(),
+                        textSize: 4.0,
+                        textWeight: FontWeight.normal,
+                        typeAlign: Alignment.topLeft,
+                        captionAlign: TextAlign.left,
+                        textColor: notPaidDates.contains(item.key)
+                            ? red
+                            : extendedDates.contains(item.key)
+                                ? Colors.yellow.shade700
+                                : black,
+                      ),
+
+                // item.value == 0 && notPaidDates.contains(item.key)
+                //     ? item.key == currentDate
+                //         ? CustomTextBox(
+                //             textValue: 'Not Paid',
+                //             textSize: 4.5,
+                //             textWeight: FontWeight.bold,
+                //             typeAlign: Alignment.topLeft,
+                //             captionAlign: TextAlign.left,
+                //             textColor: red,
+                //           )
+                //         : CustomTextBox(
+                //             textValue: 'Not Paid',
+                //             textSize: 4.0,
+                //             textWeight: FontWeight.normal,
+                //             typeAlign: Alignment.topLeft,
+                //             captionAlign: TextAlign.left,
+                //             textColor: red,
+                //           )
+                //     : const SizedBox(),
+                // : item.value == 0
+                //     ? item.key == currentDate
+                //         ? CustomTextBox(
+                //             textValue: "Awaiting",
+                //             textSize: 4.5,
+                //             textWeight: FontWeight.bold,
+                //             typeAlign: Alignment.topLeft,
+                //             captionAlign: TextAlign.left,
+                //             textColor: black,
+                //           )
+                //         : CustomTextBox(
+                //             textValue: "Awaiting",
+                //             textSize: 4.0,
+                //             textWeight: FontWeight.normal,
+                //             typeAlign: Alignment.topLeft,
+                //             captionAlign: TextAlign.left,
+                //             textColor: black,
+                //           )
+                //     : item.key == currentDate
+                //         ? CustomTextBox(
+                //             textValue: "Paid",
+                //             textSize: 4.5,
+                //             textWeight: FontWeight.bold,
+                //             typeAlign: Alignment.topLeft,
+                //             captionAlign: TextAlign.left,
+                //             textColor: green!,
+                //           )
+                //         : CustomTextBox(
+                //             textValue: "Paid",
+                //             textSize: 4.0,
+                //             textWeight: FontWeight.normal,
+                //             typeAlign: Alignment.topLeft,
+                //             captionAlign: TextAlign.left,
+                //             textColor: green!,
+                //           ),
               ],
             ),
           )

@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import '../shared/colors.dart';
 
 class ViewPDFArgs {
-  final doc;
+  final PDFDocument doc;
 
-  ViewPDFArgs({this.doc});
+  ViewPDFArgs({required this.doc});
 }
 
 class ViewPDF extends StatefulWidget {
-  ViewPDF({Key? key}) : super(key: key);
+  const ViewPDF({Key? key}) : super(key: key);
 
   @override
   _ViewPDFState createState() => _ViewPDFState();
@@ -23,13 +23,13 @@ class _ViewPDFState extends State<ViewPDF> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           "Preview",
           style: TextStyle(color: mainColor),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0.0,
-        iconTheme: IconThemeData(
+        iconTheme: const IconThemeData(
           color: accentColor, //change your color here
         ),
       ),

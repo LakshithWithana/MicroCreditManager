@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:mcm/admins/give_new_loan.dart';
 import 'package:mcm/reusable_components/admin_view_loan_card.dart';
 import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
 import 'package:mcm/reusable_components/loading.dart';
@@ -11,11 +12,12 @@ import 'package:mcm/shared/text.dart';
 class ViewSingleCustomerArgs {
   final QueryDocumentSnapshot? userProfile;
   final bool? isAdmin;
-  ViewSingleCustomerArgs(this.userProfile, this.isAdmin);
+  final String? url;
+  ViewSingleCustomerArgs(this.userProfile, this.isAdmin, this.url);
 }
 
 class ViewSingleCustomer extends StatefulWidget {
-  ViewSingleCustomer({Key? key}) : super(key: key);
+  const ViewSingleCustomer({Key? key}) : super(key: key);
 
   @override
   State<ViewSingleCustomer> createState() => _ViewSingleCustomerState();
@@ -46,13 +48,31 @@ class _ViewSingleCustomerState extends State<ViewSingleCustomer> {
           child: Column(
             children: [
               SizedBox(height: height * 2),
-              CustomTextBox(
-                textValue: userData['firstName'] + " " + userData['lastName'],
-                textSize: 7,
-                textWeight: FontWeight.bold,
-                typeAlign: Alignment.topLeft,
-                captionAlign: TextAlign.left,
-                textColor: black,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CustomTextBox(
+                    textValue:
+                        userData['firstName'] + " " + userData['lastName'],
+                    textSize: 7,
+                    textWeight: FontWeight.bold,
+                    typeAlign: Alignment.topLeft,
+                    captionAlign: TextAlign.left,
+                    textColor: black,
+                  ),
+                  Container(
+                    height: 80.0,
+                    width: 80.0,
+                    decoration: BoxDecoration(
+                        image: DecorationImage(
+                            image: NetworkImage(
+                              args.url!,
+                            ),
+                            fit: BoxFit.cover),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(15))),
+                  ),
+                ],
               ),
               SizedBox(height: height * 2),
               Container(
@@ -98,7 +118,7 @@ class _ViewSingleCustomerState extends State<ViewSingleCustomer> {
                             textColor: black,
                           ),
                           CustomTextBox(
-                            textValue: userData['govtID'],
+                            textValue: userData['govIdNumber'],
                             textSize: 4.0,
                             textWeight: FontWeight.normal,
                             typeAlign: Alignment.topLeft,
@@ -220,7 +240,9 @@ class _ViewSingleCustomerState extends State<ViewSingleCustomer> {
                     PositiveElevatedButton(
                       label: 'Add a Loan',
                       onPressed: () {
-                        Navigator.pushNamed(context, '/giveNewLoan');
+                        Navigator.pushNamed(context, '/giveNewLoan',
+                            arguments:
+                                GiveNewLoanArgs(userProfile: args.userProfile));
                       },
                     ),
                   ],

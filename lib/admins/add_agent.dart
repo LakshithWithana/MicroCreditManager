@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:form_field_validator/form_field_validator.dart';
 import 'package:intl/intl.dart';
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
 import 'package:mcm/models/user_model.dart';
 import 'package:mcm/reusable_components/custom_checkbox.dart';
 import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
@@ -16,8 +14,10 @@ import 'package:mcm/shared/colors.dart';
 import 'package:mcm/shared/text.dart';
 import 'package:provider/provider.dart';
 
+import '../services/revenuecat.dart';
+
 class AddAgent extends StatefulWidget {
-  AddAgent({Key? key}) : super(key: key);
+  const AddAgent({Key? key}) : super(key: key);
 
   @override
   State<AddAgent> createState() => _AddAgentState();
@@ -59,61 +59,58 @@ class _AddAgentState extends State<AddAgent> {
 
     final user = Provider.of<mcmUser?>(context);
 
+    final entitlement = Provider.of<RevenuecatProvider>(context).entitlement;
+
     /// random pin generator
     String? randomPinGenerator() {
-      var rng = new Random();
+      var rng = Random();
       int randomNumber = rng.nextInt(99999) + 99999;
       return randomNumber.toString();
     }
 
     /// agent id creation
     String? agentIdGenerator(String? adminId, int? accountCount) {
-      String? agentId = adminId!.split('A').first +
-          "AGT" +
-          adminId.split('M').last.split('-').first +
-          "-" +
-          accountCount!.toString() +
-          "-" +
-          (DateTime.now().millisecondsSinceEpoch).toString().substring(8);
+      String? agentId =
+          "${adminId!.split('A').first}AGT${adminId.split('M').last.split('-').first}-${accountCount!}-${(DateTime.now().millisecondsSinceEpoch).toString().substring(8)}";
       return agentId;
     }
 
-    sendEmail({email, String? randomPassword, String? role}) async {
-      String username = 'mcmmailing@gmail.com';
-      String password = 'TeSt1234';
+    // sendEmail({email, String? randomPassword, String? role}) async {
+    //   String username = 'mcmmailing@gmail.com';
+    //   String password = 'TeSt1234';
 
-      // final smtpServer = gmail(username, password);
-      // Use the SmtpServer class to configure an SMTP server:
-      final smtpServer =
-          SmtpServer('smtp.gmail.com', username: username, password: password);
-      // See the named arguments of SmtpServer for further configuration
-      // options.
+    //   // final smtpServer = gmail(username, password);
+    //   // Use the SmtpServer class to configure an SMTP server:
+    //   final smtpServer =
+    //       SmtpServer('smtp.gmail.com', username: username, password: password);
+    //   // See the named arguments of SmtpServer for further configuration
+    //   // options.
 
-      // Create our message.
-      final message = Message()
-        ..from = Address(username, 'Micro Credit Manager')
-        ..recipients.add(email)
-        ..subject = 'New Account Created'
-        ..text = 'Your $role profile was created successtully.'
-        ..html =
-            "<h1>Successfully Created Your $role Profile</h1>\n<p>Your login password is.</p>\n<h3>$randomPassword</h3>\n<p>Please change the password when you log in.</p>";
+    //   // Create our message.
+    //   final message = Message()
+    //     ..from = Address(username, 'Micro Credit Manager')
+    //     ..recipients.add(email)
+    //     ..subject = 'New Account Created'
+    //     ..text = 'Your $role profile was created successtully.'
+    //     ..html =
+    //         "<h1>Successfully Created Your $role Profile</h1>\n<p>Your login password is.</p>\n<h3>$randomPassword</h3>\n<p>Please change the password when you log in.</p>";
 
-      try {
-        setState(() {
-          error = '';
-          fbPassword = randomPassword!;
-        });
-        final sendReport = await send(message, smtpServer);
-        print('Message sent: ' + sendReport.toString());
-      } on MailerException catch (e) {
-        print('Message not sent.');
+    //   try {
+    //     setState(() {
+    //       error = '';
+    //       fbPassword = randomPassword!;
+    //     });
+    //     final sendReport = await send(message, smtpServer);
+    //     print('Message sent: $sendReport');
+    //   } on MailerException catch (e) {
+    //     print('Message not sent.');
 
-        for (var p in e.problems) {
-          print('Problem: ${p.code}: ${p.msg}');
-        }
-      }
-      print(randomPassword);
-    }
+    //     for (var p in e.problems) {
+    //       print('Problem: ${p.code}: ${p.msg}');
+    //     }
+    //   }
+    //   print(randomPassword);
+    // }
 
     return StreamBuilder<UserDetails>(
         stream: DatabaseServices(uid: user!.uid).userDetails,
@@ -311,90 +308,106 @@ class _AddAgentState extends State<AddAgent> {
                                   )
                                 : PositiveElevatedButton(
                                     label: 'Create Agent Profile',
-                                    onPressed: () async {
-                                      setState(() {
-                                        loading = true;
-                                        // randomPin = randomPinGenerator();
-                                        agentId = agentIdGenerator(
-                                            userDetails!.userId,
-                                            userDetails.totalAgents! + 1);
-                                      });
-                                      // await agentIdsCollection
-                                      //     .get()
-                                      //     .then((value) {
-                                      //   setState(() {
-                                      //     agentId = agentIdGenerator(
-                                      //         userDetails!.userId, value.size);
-                                      //   });
-                                      // });
-                                      agentIdsCollection
-                                          .where('id', isEqualTo: agentId)
-                                          .get()
-                                          .then((value) async {
-                                        if (value.docs.isEmpty) {
-                                          if (_formKey.currentState!
-                                              .validate()) {
-                                            await sendEmail(
-                                                email: emailController.text,
-                                                randomPassword:
-                                                    randomPinGenerator(),
-                                                role: "Agent");
-
-                                            await agentRequestsCollection
-                                                .doc()
-                                                .set({
-                                              'userId': agentId,
-                                              'email': emailController.text,
-                                              'firstName':
-                                                  firstNameController.text,
-                                              'lastName':
-                                                  lastNameController.text,
-                                              'nicNumber':
-                                                  nicNumberController.text,
-                                              'companyName':
-                                                  userDetails!.companyName,
-                                              'password': fbPassword,
-                                              'companyTelNo':
-                                                  phoneNumberController.text,
-                                              'currency': userDetails.currency,
-                                              // 'createdDate': formattedDate,
-                                              'viewAgent': false,
-                                              'viewCustomer': viewCustomer,
-                                              'deposits': deposits,
-                                              'newLoans': newLoans,
-                                              'expenses': expenses,
-                                              'accounts': accounts,
-                                              'statistics': statistics,
-                                              'downloads': downloads,
-                                            });
-
-                                            await agentIdsCollection.doc().set({
-                                              'id': agentId,
-                                            });
-                                            usersCollection
-                                                .doc(user.uid)
-                                                .update({
-                                              'totalAgents':
-                                                  userDetails.totalAgents! + 1,
-                                            });
-
+                                    onPressed: entitlement ==
+                                                Entitlement.free &&
+                                            userDetails!.totalAgents! >= 1
+                                        ? () async {
                                             setState(() {
-                                              loading = false;
+                                              loading = true;
+                                              // randomPin = randomPinGenerator();
+                                              agentId = agentIdGenerator(
+                                                  userDetails.userId,
+                                                  userDetails.totalAgents! + 1);
                                             });
-                                            Navigator.pop(context);
-                                          } else {
-                                            setState(() {
-                                              loading = false;
+                                            // await agentIdsCollection
+                                            //     .get()
+                                            //     .then((value) {
+                                            //   setState(() {
+                                            //     agentId = agentIdGenerator(
+                                            //         userDetails!.userId, value.size);
+                                            //   });
+                                            // });
+                                            agentIdsCollection
+                                                .where('id', isEqualTo: agentId)
+                                                .get()
+                                                .then((value) async {
+                                              if (value.docs.isEmpty) {
+                                                if (_formKey.currentState!
+                                                    .validate()) {
+                                                  // await sendEmail(
+                                                  //     email:
+                                                  //         emailController.text,
+                                                  //     randomPassword:
+                                                  //         randomPinGenerator(),
+                                                  //     role: "Agent");
+
+                                                  await agentRequestsCollection
+                                                      .doc()
+                                                      .set({
+                                                    'userId': agentId,
+                                                    'email':
+                                                        emailController.text,
+                                                    'firstName':
+                                                        firstNameController
+                                                            .text,
+                                                    'lastName':
+                                                        lastNameController.text,
+                                                    'nicNumber':
+                                                        nicNumberController
+                                                            .text,
+                                                    'companyName':
+                                                        userDetails.companyName,
+                                                    'password': fbPassword,
+                                                    'companyTelNo':
+                                                        phoneNumberController
+                                                            .text,
+                                                    'currency':
+                                                        userDetails.currency,
+                                                    // 'createdDate': formattedDate,
+                                                    'viewAgent': false,
+                                                    'viewCustomer':
+                                                        viewCustomer,
+                                                    'deposits': deposits,
+                                                    'newLoans': newLoans,
+                                                    'expenses': expenses,
+                                                    'accounts': accounts,
+                                                    'statistics': statistics,
+                                                    'downloads': downloads,
+                                                  });
+
+                                                  await agentIdsCollection
+                                                      .doc()
+                                                      .set({
+                                                    'id': agentId,
+                                                  });
+                                                  usersCollection
+                                                      .doc(user.uid)
+                                                      .update({
+                                                    'totalAgents': userDetails
+                                                            .totalAgents! +
+                                                        1,
+                                                  });
+
+                                                  setState(() {
+                                                    loading = false;
+                                                  });
+                                                  Navigator.pop(context);
+                                                } else {
+                                                  setState(() {
+                                                    loading = false;
+                                                  });
+                                                }
+                                              } else {
+                                                setState(() {
+                                                  loading = false;
+                                                  error = "Please try again.";
+                                                });
+                                              }
                                             });
                                           }
-                                        } else {
-                                          setState(() {
-                                            loading = false;
-                                            error = "Please try again.";
-                                          });
-                                        }
-                                      });
-                                    },
+                                        : () {
+                                            showAlertDialog(context);
+                                          },
                                   ),
                             SizedBox(height: height * 2),
                           ],
@@ -407,8 +420,36 @@ class _AddAgentState extends State<AddAgent> {
               ),
             );
           } else {
-            return Loading();
+            return const Loading();
           }
         });
   }
+}
+
+showAlertDialog(BuildContext context) {
+  // set up the buttons
+  Widget cancelButton = TextButton(
+    child: const Text("Ok"),
+    onPressed: () {
+      Navigator.pop(context);
+    },
+  );
+
+  // set up the AlertDialog
+  AlertDialog alert = AlertDialog(
+    title: const Text("Maximum Agent Count Reached"),
+    content: const Text(
+        "To add more Agents into your business buy the Subscription plan."),
+    actions: [
+      cancelButton,
+    ],
+  );
+
+  // show the dialog
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return alert;
+    },
+  );
 }

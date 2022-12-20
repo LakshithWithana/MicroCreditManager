@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.microcreditmanager.mcm">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- <uses-permission android:name="com.android.vending.BILLING" /> -->
    <application
         android:label="mcm"
         android:name="${applicationName}"
@@ -31,5 +32,8 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-8305805110829789~2333538157"/>
     </application>
 </manifest>

@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:country_picker/country_picker.dart';
 import 'package:currency_picker/currency_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mcm/authentication/admin_sign_up_details.dart';
@@ -9,6 +13,8 @@ import 'package:mcm/reusable_components/loading.dart';
 import 'package:mcm/services/auth_services.dart';
 import 'package:mcm/shared/colors.dart';
 import 'package:mcm/shared/text.dart';
+
+import '../services/database_services.dart';
 
 class SignUp extends StatefulWidget {
   const SignUp({Key? key, this.toggleView}) : super(key: key);
@@ -32,6 +38,82 @@ class _SignUpState extends State<SignUp> {
   String? _currency = "";
 
   bool? loading = false;
+  bool isLoading = false;
+
+  String? url = "";
+
+  Future getImageAndUpload() async {
+    setState(() {
+      isLoading = true;
+    });
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg'],
+    );
+    if (result != null) {
+      PlatformFile file = result.files.first;
+
+      print(file.name);
+      print(file.bytes);
+      print(file.size);
+      print(file.extension);
+      print(file.path);
+
+      Uint8List fileBytes = result.files.first.bytes!;
+      String fileName = result.files.first.name;
+
+      // Upload file
+      await FirebaseStorage.instance
+          .ref()
+          .child('${companyNameController.text}/${companyNameController.text}')
+          .putData(fileBytes)
+          .whenComplete(() => null)
+          .then((value) {
+        print('Upload Completed');
+        value.ref.getDownloadURL().then((value) {
+          updateUrlToFirestore(
+              value, companyNameController.text, file.extension);
+          setState(() {
+            url = value;
+          });
+        });
+        setState(() {
+          isLoading = false;
+        });
+      }).catchError((error) {
+        print(error);
+        setState(() {
+          isLoading = false;
+        });
+      });
+    } else {
+      // User canceled the picker
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future updateUrlToFirestore(
+      String fileValue, String fileName, String? fileExtension) async {
+    return await imagesCollection.doc().set({
+      'companyName': companyNameController.text,
+      'url': fileValue,
+      'name': fileName,
+      'type': fileExtension,
+    }).then((value) {
+      setState(() {
+        isLoading = false;
+      });
+    }).catchError((error) {
+      print(error);
+      setState(() {
+        isLoading = false;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +148,7 @@ class _SignUpState extends State<SignUp> {
                         label: 'Company Name',
                         controller: companyNameController,
                         validator: (value) =>
-                            value!.isEmpty ? 'Enter your first name' : null,
+                            value!.isEmpty ? 'Enter company name' : null,
                       ),
                     ],
                   ),
@@ -139,7 +221,7 @@ class _SignUpState extends State<SignUp> {
                             SizedBox(height: height * 2),
                           ],
                         )
-                      : SizedBox(),
+                      : const SizedBox(),
 
                   Column(
                     children: [
@@ -155,10 +237,10 @@ class _SignUpState extends State<SignUp> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           elevation: 0.0,
+                          backgroundColor: backgroundColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(width * 3),
                           ),
-                          primary: backgroundColor,
                         ),
                         onPressed: () {
                           showCountryPicker(
@@ -213,17 +295,17 @@ class _SignUpState extends State<SignUp> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           elevation: 0.0,
+                          backgroundColor: backgroundColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(width * 3),
                           ),
-                          primary: backgroundColor,
                         ),
                         onPressed: () {
                           showCurrencyPicker(
                               context: context,
                               theme: CurrencyPickerThemeData(
                                 flagSize: 25,
-                                titleTextStyle: TextStyle(fontSize: 17),
+                                titleTextStyle: const TextStyle(fontSize: 17),
                                 subtitleTextStyle: TextStyle(
                                     fontSize: 15,
                                     color: Theme.of(context).hintColor),
@@ -284,10 +366,11 @@ class _SignUpState extends State<SignUp> {
                   // ),
                   // SizedBox(height: height * 2),
                   SizedBox(height: height * 2),
+
                   Column(
                     children: [
                       CustomTextFormField(
-                        label: 'Capital Amount ($_currency)',
+                        label: 'Initial Deposit ($_currency)',
                         controller: capitalAmountController,
                         validator: (value) =>
                             value!.isEmpty ? 'Enter a capital amount' : null,
@@ -298,7 +381,51 @@ class _SignUpState extends State<SignUp> {
                       ),
                     ],
                   ),
+                  SizedBox(height: height * 2),
+                  CustomTextBox(
+                    textValue: 'Company logo',
+                    textSize: 4,
+                    textWeight: FontWeight.normal,
+                    typeAlign: Alignment.topLeft,
+                    captionAlign: TextAlign.left,
+                    textColor: black,
+                  ),
                   SizedBox(height: height * 1),
+                  Row(
+                    children: [
+                      Container(
+                        height: 120.0,
+                        width: 120.0,
+                        decoration: BoxDecoration(
+                            color: url == "" ? Colors.grey : null,
+                            image: DecorationImage(
+                                image: NetworkImage(
+                                  url!,
+                                ),
+                                fit: BoxFit.cover),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(15))),
+                        child: isLoading == true
+                            ? const Center(
+                                child: CircularProgressIndicator(),
+                              )
+                            : url == ""
+                                ? const Icon(
+                                    Icons.business,
+                                    size: 36,
+                                  )
+                                : null,
+                      ),
+                      SizedBox(width: width * 10),
+                      PositiveHalfElevatedButton(
+                        label: "Upload",
+                        onPressed: () {
+                          getImageAndUpload();
+                        },
+                      ),
+                    ],
+                  ),
+                  // SizedBox(height: height * 1),
                   CustomTextBox(
                     textValue: error!,
                     textSize: 3.5,
@@ -328,7 +455,7 @@ class _SignUpState extends State<SignUp> {
                             country: country,
                             countryCode: countryCode,
                             currency: _currency,
-                            companyTelNo: companyNameController.text,
+                            companyTelNo: companyTelNoController.text,
                             capitalAmount:
                                 int.parse(capitalAmountController.text),
                           ),
@@ -379,7 +506,7 @@ class CustomInputFormatter extends TextInputFormatter {
       return newValue;
     }
 
-    var buffer = new StringBuffer();
+    var buffer = StringBuffer();
     for (int i = 0; i < text.length; i++) {
       buffer.write(text[i]);
       var nonZeroIndex = i + 1;
@@ -392,6 +519,6 @@ class CustomInputFormatter extends TextInputFormatter {
     var string = buffer.toString();
     return newValue.copyWith(
         text: string,
-        selection: new TextSelection.collapsed(offset: string.length));
+        selection: TextSelection.collapsed(offset: string.length));
   }
 }

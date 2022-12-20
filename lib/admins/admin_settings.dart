@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
 import 'package:mcm/services/auth_services.dart';
 
 import '../shared/colors.dart';
 import '../shared/text.dart';
 
 class AdminSettings extends StatefulWidget {
-  AdminSettings({Key? key}) : super(key: key);
+  const AdminSettings({Key? key}) : super(key: key);
 
   @override
   _AdminSettingsState createState() => _AdminSettingsState();
 }
 
 class _AdminSettingsState extends State<AdminSettings> {
-  AuthServices _authServices = AuthServices();
+  final AuthServices _authServices = AuthServices();
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +30,7 @@ class _AdminSettingsState extends State<AdminSettings> {
         padding: EdgeInsets.fromLTRB(width * 5.1, 0, width * 5.1, 0.0),
         child: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: height * 2),
               CustomTextBox(
@@ -42,13 +42,57 @@ class _AdminSettingsState extends State<AdminSettings> {
                 textColor: black,
               ),
               SizedBox(height: height * 2),
-              SizedBox(height: height * 60),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/viewProfile');
+                },
+                icon: const Icon(Icons.person_outlined),
+                label: CustomTextBox(
+                  textValue: "My Profile",
+                  textSize: 5,
+                  textWeight: FontWeight.normal,
+                  typeAlign: Alignment.topLeft,
+                  captionAlign: TextAlign.left,
+                  textColor: black,
+                ),
+              ),
+              SizedBox(height: height * 1),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/changePassword');
+                },
+                icon: const Icon(Icons.password),
+                label: CustomTextBox(
+                  textValue: "Change Password",
+                  textSize: 5,
+                  textWeight: FontWeight.normal,
+                  typeAlign: Alignment.topLeft,
+                  captionAlign: TextAlign.left,
+                  textColor: black,
+                ),
+              ),
+              SizedBox(height: height * 1),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/subscription');
+                },
+                icon: const Icon(Icons.subscriptions),
+                label: CustomTextBox(
+                  textValue: "Subscription",
+                  textSize: 5,
+                  textWeight: FontWeight.normal,
+                  typeAlign: Alignment.topLeft,
+                  captionAlign: TextAlign.left,
+                  textColor: black,
+                ),
+              ),
+              SizedBox(height: height * 40),
               TextButton.icon(
                 onPressed: () async {
                   await _authServices.signOut();
                   Navigator.pop(context);
                 },
-                icon: Icon(Icons.logout),
+                icon: const Icon(Icons.logout),
                 label: CustomTextBox(
                   textValue: "Log out",
                   textSize: 5,

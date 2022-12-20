@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mcm/models/user_model.dart';
 import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
@@ -9,7 +8,7 @@ import 'package:mcm/shared/text.dart';
 import 'package:provider/provider.dart';
 
 class Expenses extends StatefulWidget {
-  Expenses({Key? key}) : super(key: key);
+  const Expenses({Key? key}) : super(key: key);
 
   @override
   _ExpensesState createState() => _ExpensesState();
@@ -147,7 +146,7 @@ class _ExpensesState extends State<Expenses> {
                                   ),
                                 ],
                               ),
-                              Container(
+                              SizedBox(
                                 height: height * 70,
                                 width: width * 100,
                                 child: Padding(
@@ -242,49 +241,91 @@ class SingleExpense extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height * 80,
-      child: FutureBuilder(
-        future: transactionsCollection.doc(user.uid).get(),
-        builder: (BuildContext context, AsyncSnapshot snapshot) {
-          if (snapshot.hasData) {
-            List expenses = snapshot.data!['expenses'].toList();
-            List filteredExpenses = expenses
-                .where((element) => element['category'] == category.toString())
-                .toList();
-            return ListView.builder(
-              itemCount: filteredExpenses.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CustomTextBox(
-                      textValue: filteredExpenses[index]['reason'],
-                      textSize: 5.0,
-                      textWeight: FontWeight.normal,
-                      typeAlign: Alignment.topLeft,
-                      captionAlign: TextAlign.left,
-                      textColor: black,
-                    ),
-                    CustomTextBox(
-                      textValue: userDetails!.currency! +
-                          " " +
-                          filteredExpenses[index]['amount'].toString(),
-                      textSize: 5.0,
-                      textWeight: FontWeight.normal,
-                      typeAlign: Alignment.topRight,
-                      captionAlign: TextAlign.right,
-                      textColor: black,
-                    ),
-                  ],
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            CustomTextBox(
+              textValue: "Expense",
+              textSize: 5.0,
+              textWeight: FontWeight.bold,
+              typeAlign: Alignment.topLeft,
+              captionAlign: TextAlign.left,
+              textColor: black,
+            ),
+            CustomTextBox(
+              textValue: "From",
+              textSize: 5.0,
+              textWeight: FontWeight.bold,
+              typeAlign: Alignment.topLeft,
+              captionAlign: TextAlign.left,
+              textColor: black,
+            ),
+            CustomTextBox(
+              textValue: "Amount",
+              textSize: 5.0,
+              textWeight: FontWeight.bold,
+              typeAlign: Alignment.topRight,
+              captionAlign: TextAlign.right,
+              textColor: black,
+            ),
+          ],
+        ),
+        SizedBox(
+          height: height * 60,
+          child: FutureBuilder(
+            future: transactionsCollection.doc(user.uid).get(),
+            builder: (BuildContext context, AsyncSnapshot snapshot) {
+              if (snapshot.hasData) {
+                List expenses = snapshot.data!['expenses'].toList();
+                List filteredExpenses = expenses
+                    .where(
+                        (element) => element['category'] == category.toString())
+                    .toList();
+                return ListView.builder(
+                  itemCount: filteredExpenses.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        CustomTextBox(
+                          textValue: filteredExpenses[index]['reason'],
+                          textSize: 5.0,
+                          textWeight: FontWeight.normal,
+                          typeAlign: Alignment.topLeft,
+                          captionAlign: TextAlign.left,
+                          textColor: black,
+                        ),
+                        CustomTextBox(
+                          textValue: filteredExpenses[index]['from'],
+                          textSize: 5.0,
+                          textWeight: FontWeight.normal,
+                          typeAlign: Alignment.topLeft,
+                          captionAlign: TextAlign.left,
+                          textColor: black,
+                        ),
+                        CustomTextBox(
+                          textValue: userDetails!.currency! +
+                              " " +
+                              filteredExpenses[index]['amount'].toString(),
+                          textSize: 5.0,
+                          textWeight: FontWeight.normal,
+                          typeAlign: Alignment.topRight,
+                          captionAlign: TextAlign.right,
+                          textColor: black,
+                        ),
+                      ],
+                    );
+                  },
                 );
-              },
-            );
-          } else {
-            return Loading();
-          }
-        },
-      ),
+              } else {
+                return const Loading();
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 }

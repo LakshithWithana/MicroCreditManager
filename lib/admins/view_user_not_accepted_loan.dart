@@ -20,7 +20,7 @@ class ViewUserNotAcceptedLoanArgs {
 }
 
 class ViewUserNotAcceptedLoan extends StatefulWidget {
-  ViewUserNotAcceptedLoan({Key? key}) : super(key: key);
+  const ViewUserNotAcceptedLoan({Key? key}) : super(key: key);
 
   @override
   State<ViewUserNotAcceptedLoan> createState() =>
@@ -234,8 +234,7 @@ class _ViewUserNotAcceptedLoanState extends State<ViewUserNotAcceptedLoan> {
                                     textColor: black,
                                   ),
                                   CustomTextBox(
-                                    textValue:
-                                        loan['interestRate'].toString() + " %",
+                                    textValue: "${loan['interestRate']} %",
                                     textSize: 4.0,
                                     textWeight: FontWeight.normal,
                                     typeAlign: Alignment.topLeft,
@@ -337,17 +336,8 @@ class _ViewUserNotAcceptedLoanState extends State<ViewUserNotAcceptedLoan> {
                                   ),
                                   CustomTextBox(
                                     textValue: loan['loanType'] == "Monthly"
-                                        ? "x " +
-                                            (int.parse((loan['duration'])!
-                                                    .split(' ')
-                                                    .first))
-                                                .toString()
-                                        : "x " +
-                                            (int.parse((loan['duration'])!
-                                                        .split(' ')
-                                                        .first) *
-                                                    30)
-                                                .toString(),
+                                        ? "x ${int.parse((loan['duration'])!.split(' ').first)}"
+                                        : "x ${int.parse((loan['duration'])!.split(' ').first) * 30}",
                                     textSize: 4.0,
                                     textWeight: FontWeight.normal,
                                     typeAlign: Alignment.topLeft,

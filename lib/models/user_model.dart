@@ -40,6 +40,7 @@ class UserDetails {
   final int? totalCustomers;
   final int? totalAgents;
   final double? totalDeposits; //TODO change this to double
+  final double? totalExpenses;
 
   UserDetails({
     this.userId,
@@ -78,5 +79,6 @@ class UserDetails {
     this.totalAgents,
     this.totalCustomers,
     this.totalDeposits,
+    this.totalExpenses,
   });
 }

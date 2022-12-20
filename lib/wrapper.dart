@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:mcm/admins/admin_home.dart';
 import 'package:mcm/agents/agent_home.dart';
 import 'package:mcm/authentication/authentication.dart';
-import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
 import 'package:mcm/reusable_components/loading.dart';
 import 'package:mcm/services/auth_services.dart';
 import 'package:mcm/services/database_services.dart';
@@ -14,7 +13,7 @@ import 'models/user_model.dart';
 final AuthServices _auth = AuthServices();
 
 class Wrapper extends StatelessWidget {
-  Wrapper({Key? key}) : super(key: key);
+  const Wrapper({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -31,15 +30,15 @@ class Wrapper extends StatelessWidget {
           if (snapshot.hasData) {
             UserDetails userDetails = snapshot.data!;
             if (userDetails.isUser!) {
-              return UserHome();
+              return const UserHome();
             } else if (userDetails.isAdmin!) {
-              return AdminHome();
+              return const AdminHome();
             } else {
               return AgentHome();
             }
           } else {
-            return Loading();
-            // Scaffold(
+            return const Loading();
+            //     Scaffold(
             //   body: PositiveElevatedButton(
             //     label: 'LOGOUT',
             //     onPressed: () {

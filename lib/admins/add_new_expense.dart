@@ -12,7 +12,7 @@ import 'package:mcm/shared/text.dart';
 import 'package:provider/provider.dart';
 
 class AddNewExpense extends StatefulWidget {
-  AddNewExpense({Key? key}) : super(key: key);
+  const AddNewExpense({Key? key}) : super(key: key);
 
   @override
   State<AddNewExpense> createState() => _AddNewExpenseState();
@@ -25,6 +25,7 @@ class _AddNewExpenseState extends State<AddNewExpense> {
   final amountController = TextEditingController();
   String? category = 'Day-to-day expenses';
   double? totalExpenses = 0.00;
+  double? totalCapital = 0.00;
 
   var now = DateTime.now();
   var formatter = DateFormat('yyyy-MM-dd');
@@ -180,35 +181,194 @@ class _AddNewExpenseState extends State<AddNewExpense> {
                                   loading = true;
                                 });
                                 if (_formKey.currentState!.validate()) {
-                                  await transactionsCollection
-                                      .doc(user.uid)
+                                  await usersCollection
+                                      .where('companyName',
+                                          isEqualTo: userDetails.companyName)
+                                      .where('isAdmin', isEqualTo: true)
                                       .get()
-                                      .then((value) {
+                                      .then((value) async {
+                                    await usersCollection
+                                        .doc(value.docs.first.id)
+                                        .get()
+                                        .then((value) async {
+                                      if (((value.data()
+                                                  as dynamic)['collectionTotal']
+                                              .toDouble()) >=
+                                          double.parse(amountController.text)) {
+                                        await usersCollection
+                                            .doc(value.id)
+                                            .update({
+                                          'collectionTotal':
+                                              FieldValue.increment(
+                                                  -double.parse(
+                                                      amountController.text)),
+                                          'totalExpenses': FieldValue.increment(
+                                              double.parse(
+                                                  amountController.text)),
+                                        });
+                                        await transactionsCollection
+                                            .doc(value.id)
+                                            .update({
+                                          'expenses': FieldValue.arrayUnion([
+                                            {
+                                              'userId': userDetails.uid,
+                                              'category': category,
+                                              'amount': int.parse(
+                                                  amountController.text),
+                                              'reason': reasonController.text,
+                                              'date': formattedDate,
+                                              'from': 'collection',
+                                            }
+                                          ]),
+                                          'totalExpenses': FieldValue.increment(
+                                              double.parse(
+                                                  amountController.text)),
+                                        });
+                                        await expensesCollection.doc().set({
+                                          'userId': userDetails.uid,
+                                          'companyName':
+                                              userDetails.companyName,
+                                          'category': category,
+                                          'amount':
+                                              int.parse(amountController.text),
+                                          'reason': reasonController.text,
+                                          'date': formattedDate,
+                                          'from': 'collection',
+                                        });
+                                      } else if (((value.data()
+                                                  as dynamic)['totalDeposits']
+                                              .toDouble()) >=
+                                          double.parse(amountController.text)) {
+                                        await usersCollection
+                                            .doc(value.id)
+                                            .update({
+                                          // 'capitalAmount': totalCapital! -
+                                          //     double.parse(amountController.text),
+                                          'totalDeposits': FieldValue.increment(
+                                              -double.parse(
+                                                  amountController.text)),
+                                          'totalExpenses': FieldValue.increment(
+                                              double.parse(
+                                                  amountController.text)),
+                                        });
+                                        await transactionsCollection
+                                            .doc(value.id)
+                                            .update({
+                                          'expenses': FieldValue.arrayUnion([
+                                            {
+                                              'userId': userDetails.uid,
+                                              'category': category,
+                                              'amount': int.parse(
+                                                  amountController.text),
+                                              'reason': reasonController.text,
+                                              'date': formattedDate,
+                                              'from': 'deposits',
+                                            }
+                                          ]),
+                                          'totalExpenses': FieldValue.increment(
+                                              double.parse(
+                                                  amountController.text)),
+                                        });
+                                        await expensesCollection.doc().set({
+                                          'userId': userDetails.uid,
+                                          'companyName':
+                                              userDetails.companyName,
+                                          'category': category,
+                                          'amount':
+                                              int.parse(amountController.text),
+                                          'reason': reasonController.text,
+                                          'date': formattedDate,
+                                          'from': 'deposits',
+                                        });
+                                      }
+                                      // else if (((value.data()
+                                      //             as dynamic)['capitalAmount']
+                                      //         .toDouble()) >=
+                                      //     double.parse(amountController.text)) {
+                                      //   await usersCollection
+                                      //       .doc(value.id)
+                                      //       .update({
+                                      //     // 'capitalAmount': totalCapital! -
+                                      //     //     double.parse(amountController.text),
+                                      //     'capitalAmount': FieldValue.increment(
+                                      //         -double.parse(
+                                      //             amountController.text)),
+
+                                      //   });
+                                      //   await transactionsCollection
+                                      //       .doc(value.id)
+                                      //       .update({
+                                      //     'expenses': FieldValue.arrayUnion([
+                                      //       {
+                                      //         'userId': userDetails.uid,
+                                      //         'category': category,
+                                      //         'amount': int.parse(
+                                      //             amountController.text),
+                                      //         'reason': reasonController.text,
+                                      //         'date': formattedDate,
+                                      //         'from': 'capital',
+                                      //       }
+                                      //     ]),
+                                      //     'totalExpenses': FieldValue.increment(
+                                      //         double.parse(
+                                      //             amountController.text)),
+                                      //   });
+                                      // }
+                                      else {
+                                        showModalBottomSheet<void>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Container(
+                                                height: 200,
+                                                color: backgroundColor,
+                                                child: Center(
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: <Widget>[
+                                                      CustomTextBox(
+                                                        textValue:
+                                                            "Expense amount is higher than your current total",
+                                                        textSize: 4.0,
+                                                        textWeight:
+                                                            FontWeight.normal,
+                                                        typeAlign:
+                                                            Alignment.topLeft,
+                                                        captionAlign:
+                                                            TextAlign.left,
+                                                        textColor: black,
+                                                      ),
+                                                      PositiveHalfElevatedButton(
+                                                        label: "OK",
+                                                        onPressed: () {
+                                                          Navigator.pop(
+                                                              context);
+                                                          Navigator.pop(
+                                                              context);
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      }
+                                    });
+
                                     setState(() {
-                                      totalExpenses = (value.data()
-                                              as dynamic)['totalExpenses']
-                                          .toDouble();
+                                      loading = false;
                                     });
                                   });
-                                  await transactionsCollection
-                                      .doc(user.uid)
-                                      .update({
-                                    'expenses': FieldValue.arrayUnion([
-                                      {
-                                        'userId': userDetails.uid,
-                                        'category': category,
-                                        'amount':
-                                            int.parse(amountController.text),
-                                        'reason': reasonController.text,
-                                        'date': formattedDate,
-                                      }
-                                    ]),
-                                    'totalExpenses': totalExpenses! +
-                                        double.parse(amountController.text),
-                                  });
-                                  setState(() {
-                                    loading = false;
-                                  });
+                                  //--------------------------------------------
+
                                   Navigator.pop(context);
                                 }
                               },
@@ -224,7 +384,7 @@ class _AddNewExpenseState extends State<AddNewExpense> {
               ),
             );
           } else {
-            return Loading();
+            return const Loading();
           }
         });
   }

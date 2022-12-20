@@ -1,18 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:mcm/models/user_model.dart';
-import 'package:mcm/reusable_components/accepeted_loan_card.dart';
 import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
 import 'package:mcm/reusable_components/loading.dart';
 import 'package:mcm/reusable_components/view_loan_card.dart';
-import 'package:mcm/services/auth_services.dart';
 import 'package:mcm/services/database_services.dart';
 import 'package:mcm/shared/colors.dart';
 import 'package:mcm/shared/text.dart';
 import 'package:provider/provider.dart';
 
 class UserHome extends StatefulWidget {
-  UserHome({Key? key}) : super(key: key);
+  const UserHome({Key? key}) : super(key: key);
 
   @override
   _UserHomeState createState() => _UserHomeState();
@@ -20,6 +19,39 @@ class UserHome extends StatefulWidget {
 
 class _UserHomeState extends State<UserHome> {
   bool? isNotification = false;
+
+  BannerAd? _ad;
+
+  @override
+  void initState() {
+    super.initState();
+
+    BannerAd(
+      adUnitId: "ca-app-pub-8305805110829789/9002225884",
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _ad = ad as BannerAd;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          // Releases an ad resource when it fails to load
+          ad.dispose();
+          debugPrint(
+              'Ad load failed (code=${error.code} message=${error.message})');
+        },
+      ),
+    ).load();
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    _ad?.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -193,8 +225,16 @@ class _UserHomeState extends State<UserHome> {
                         captionAlign: TextAlign.left,
                         textColor: black,
                       ),
+                      _ad != null
+                          ? Container(
+                              width: _ad!.size.width.toDouble(),
+                              height: 72.0,
+                              alignment: Alignment.center,
+                              child: AdWidget(ad: _ad!),
+                            )
+                          : const SizedBox(),
                       SizedBox(height: height * 2),
-                      Container(
+                      SizedBox(
                         height: height * 75,
                         width: width * 100.0,
                         child: DefaultTabController(
@@ -221,49 +261,174 @@ class _UserHomeState extends State<UserHome> {
                                   ),
                                 ],
                               ),
-                              Container(
+                              SizedBox(
                                 height: height * 70,
                                 width: width * 100,
                                 child: Padding(
                                   padding: EdgeInsets.only(top: height * 2),
                                   child: TabBarView(
                                     children: [
+                                      //loans section----------------------------------------------------------------
                                       SizedBox(
-                                        height: height * 80,
+                                        height: height * 70,
+                                        width: width * 100.0,
                                         child: Column(
                                           children: [
-                                            SizedBox(
-                                              height: height * 60,
-                                              child:
-                                                  FutureBuilder<QuerySnapshot>(
-                                                future: loanRequestsCollection
-                                                    .where('user',
-                                                        isEqualTo: user.uid)
-                                                    .where('companyName',
-                                                        isEqualTo: userDetails
-                                                            .companyName)
-                                                    .where('status',
-                                                        isEqualTo: 'okayed')
-                                                    .get(),
-                                                // initialData: InitialData,
-                                                builder: (BuildContext context,
-                                                    AsyncSnapshot snapshot) {
-                                                  if (snapshot.hasData) {
-                                                    final loans = snapshot
-                                                        .data!.docs
-                                                        .toList();
-                                                    return ListView.builder(
-                                                      itemCount: loans.length,
-                                                      itemBuilder:
-                                                          (context, index) {
-                                                        return ViewLoanCard(
-                                                            loan: loans[index]);
-                                                      },
-                                                    );
-                                                  } else {
-                                                    return const Loading();
-                                                  }
-                                                },
+                                            DefaultTabController(
+                                              length: 2,
+                                              child: Column(
+                                                children: [
+                                                  Container(
+                                                    color: Colors.purple
+                                                        .withAlpha(30),
+                                                    child: TabBar(
+                                                      tabs: [
+                                                        CustomTextBox(
+                                                          textValue: 'Active',
+                                                          textSize: 4,
+                                                          textWeight:
+                                                              FontWeight.bold,
+                                                          typeAlign:
+                                                              Alignment.center,
+                                                          captionAlign:
+                                                              TextAlign.center,
+                                                          textColor:
+                                                              mainFontColor,
+                                                        ),
+                                                        CustomTextBox(
+                                                          textValue:
+                                                              'Requested',
+                                                          textSize: 4,
+                                                          textWeight:
+                                                              FontWeight.bold,
+                                                          typeAlign:
+                                                              Alignment.center,
+                                                          captionAlign:
+                                                              TextAlign.center,
+                                                          textColor:
+                                                              mainFontColor,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    height: height * 55,
+                                                    width: width * 100,
+                                                    child: Padding(
+                                                      padding: EdgeInsets.only(
+                                                          top: height * 2),
+                                                      child: TabBarView(
+                                                        children: [
+                                                          SizedBox(
+                                                            child: Column(
+                                                              children: [
+                                                                SizedBox(
+                                                                  height:
+                                                                      height *
+                                                                          50,
+                                                                  child: FutureBuilder<
+                                                                      QuerySnapshot>(
+                                                                    future: loanRequestsCollection
+                                                                        .where(
+                                                                            'user',
+                                                                            isEqualTo: user
+                                                                                .uid)
+                                                                        .where(
+                                                                            'companyName',
+                                                                            isEqualTo: userDetails
+                                                                                .companyName)
+                                                                        .where(
+                                                                            'status',
+                                                                            isEqualTo:
+                                                                                'okayed')
+                                                                        .get(),
+                                                                    // initialData: InitialData,
+                                                                    builder: (BuildContext
+                                                                            context,
+                                                                        AsyncSnapshot
+                                                                            snapshot) {
+                                                                      if (snapshot
+                                                                          .hasData) {
+                                                                        final loans = snapshot
+                                                                            .data!
+                                                                            .docs
+                                                                            .toList();
+                                                                        return ListView
+                                                                            .builder(
+                                                                          itemCount:
+                                                                              loans.length,
+                                                                          itemBuilder:
+                                                                              (context, index) {
+                                                                            return ViewLoanCard(loan: loans[index]);
+                                                                          },
+                                                                        );
+                                                                      } else {
+                                                                        return const Loading();
+                                                                      }
+                                                                    },
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          SizedBox(
+                                                            height: height * 70,
+                                                            child: Column(
+                                                              children: [
+                                                                SizedBox(
+                                                                  height:
+                                                                      height *
+                                                                          50,
+                                                                  child: FutureBuilder<
+                                                                      QuerySnapshot>(
+                                                                    future: loanRequestsCollection
+                                                                        .where(
+                                                                            'user',
+                                                                            isEqualTo: user
+                                                                                .uid)
+                                                                        .where(
+                                                                            'companyName',
+                                                                            isEqualTo: userDetails
+                                                                                .companyName)
+                                                                        .where(
+                                                                            'status',
+                                                                            isEqualTo:
+                                                                                'requested')
+                                                                        .get(),
+                                                                    // initialData: InitialData,
+                                                                    builder: (BuildContext
+                                                                            context,
+                                                                        AsyncSnapshot
+                                                                            snapshot) {
+                                                                      if (snapshot
+                                                                          .hasData) {
+                                                                        final loans = snapshot
+                                                                            .data!
+                                                                            .docs
+                                                                            .toList();
+                                                                        return ListView
+                                                                            .builder(
+                                                                          itemCount:
+                                                                              loans.length,
+                                                                          itemBuilder:
+                                                                              (context, index) {
+                                                                            return ViewLoanCard(loan: loans[index]);
+                                                                          },
+                                                                        );
+                                                                      } else {
+                                                                        return const Loading();
+                                                                      }
+                                                                    },
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                             PositiveElevatedButton(
@@ -276,6 +441,64 @@ class _UserHomeState extends State<UserHome> {
                                           ],
                                         ),
                                       ),
+                                      //----------------------------------------------------------------
+                                      // SizedBox(
+                                      //   height: height * 80,
+                                      //   child: Column(
+                                      //     children: [
+                                      //       SizedBox(
+                                      //         height: height * 60,
+                                      //         child:
+                                      //             FutureBuilder<QuerySnapshot>(
+                                      //           future: loanRequestsCollection
+                                      //               .where('user',
+                                      //                   isEqualTo: user.uid)
+                                      //               .where('companyName',
+                                      //                   isEqualTo: userDetails
+                                      //                       .companyName)
+                                      //               .where('status',
+                                      //                   isEqualTo: 'okayed')
+                                      //               .get(),
+                                      //           // initialData: InitialData,
+                                      //           builder: (BuildContext context,
+                                      //               AsyncSnapshot snapshot) {
+                                      //             if (snapshot.hasData) {
+                                      //               final loans = snapshot
+                                      //                   .data!.docs
+                                      //                   .toList();
+                                      //               return ListView.builder(
+                                      //                 itemCount: loans.length,
+                                      //                 itemBuilder:
+                                      //                     (context, index) {
+                                      //                   return ViewLoanCard(
+                                      //                       loan: loans[index]);
+                                      //                 },
+                                      //               );
+                                      //             } else {
+                                      //               return const Loading();
+                                      //             }
+                                      //           },
+                                      //         ),
+                                      //       ),
+                                      //       PositiveElevatedButton(
+                                      //         label: 'Request a Loan',
+                                      //         onPressed: () {
+                                      //           Navigator.pushNamed(
+                                      //               context, '/requestLoan');
+                                      //         },
+                                      //       ),
+                                      //       _ad != null
+                                      //           ? Container(
+                                      //               width: _ad!.size.width
+                                      //                   .toDouble(),
+                                      //               height: 72.0,
+                                      //               alignment: Alignment.center,
+                                      //               child: AdWidget(ad: _ad!),
+                                      //             )
+                                      //           : const SizedBox(),
+                                      //     ],
+                                      //   ),
+                                      // ),
                                       SizedBox(
                                         height: height * 80,
                                         child: Column(
@@ -323,13 +546,8 @@ class _UserHomeState extends State<UserHome> {
                                                               textColor: black,
                                                             ),
                                                             CustomTextBox(
-                                                              textValue: userDetails
-                                                                      .currency! +
-                                                                  " " +
-                                                                  expenses[index]
-                                                                          [
-                                                                          'amount']
-                                                                      .toString(),
+                                                              textValue:
+                                                                  "${userDetails.currency!} ${expenses[index]['amount']}",
                                                               textSize: 5.0,
                                                               textWeight:
                                                                   FontWeight

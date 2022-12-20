@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/date_time_patterns.dart';
 import 'package:intl/intl.dart';
 import 'package:mcm/models/user_model.dart';
 import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
@@ -18,12 +17,13 @@ import '../reusable_components/text_input_formatters.dart';
 
 class GiveNewLoanArgs {
   final bool? isAdmin;
+  final QueryDocumentSnapshot? userProfile;
 
-  GiveNewLoanArgs({this.isAdmin});
+  GiveNewLoanArgs({this.isAdmin, this.userProfile});
 }
 
 class GiveNewLoan extends StatefulWidget {
-  GiveNewLoan({Key? key}) : super(key: key);
+  const GiveNewLoan({Key? key}) : super(key: key);
 
   @override
   State<GiveNewLoan> createState() => _GiveNewLoanState();
@@ -35,6 +35,7 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
   bool? loading = false;
   String? userName = "";
   String? userId = "";
+  String? serachQuery = "";
   String? uid = "";
   String? duration = "1 month";
   String? loanType = "Monthly";
@@ -48,6 +49,7 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
   double? totalCollection = 0;
 
   final amountController = TextEditingController();
+  final interestController = TextEditingController();
   String? amount = "0";
   final dateController = TextEditingController();
 
@@ -59,6 +61,8 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
 
   Map collectingDates = {};
   List? dateList = [];
+
+  TextEditingController controller = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +82,21 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
       updateState(() {
         error = errorMessage!;
       });
+    }
+
+    if (args.userProfile != null) {
+      if (mounted) {
+        setState(() {
+          setState(() {
+            uid = args.userProfile!.id;
+            userName = (args.userProfile!.data() as dynamic)['firstName'] +
+                " " +
+                (args.userProfile!.data() as dynamic)['lastName'];
+
+            userId = (args.userProfile!.data() as dynamic)['userId'];
+          });
+        });
+      }
     }
 
     return StreamBuilder<UserDetails>(
@@ -115,70 +134,196 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                         ),
                         SizedBox(height: height * 2),
                         CustomTextFormField(
-                          label: 'User Id',
+                          controller: controller,
+                          initialValue: args.userProfile != null
+                              ? userId
+                              : userName != ""
+                                  ? userName
+                                  : null,
+                          readOnly: args.userProfile != null ? true : false,
+                          label: 'User name',
                           onChanged: (value) {
-                            usersCollection
-                                .where('userId', isEqualTo: value)
-                                .where('isUser', isEqualTo: true)
-                                .get()
-                                .then((user) {
-                              setState(() {
-                                uid = user.docs.first.id;
-                                userName = (user.docs.first.data()
-                                        as dynamic)['firstName'] +
-                                    " " +
-                                    (user.docs.first.data()
-                                        as dynamic)['lastName'];
+                            // usersCollection
+                            //     .where('userId', isEqualTo: value)
+                            //     .where('isUser', isEqualTo: true)
+                            //     .get()
+                            //     .then((user) {
+                            //   setState(() {
+                            //     uid = user.docs.first.id;
+                            //     userName = (user.docs.first.data()
+                            //             as dynamic)['firstName'] +
+                            //         " " +
+                            //         (user.docs.first.data()
+                            //             as dynamic)['lastName'];
 
-                                userId = (user.docs.first.data()
-                                    as dynamic)['userId'];
-                              });
-                            }).onError((error, stackTrace) => null);
+                            //     userId = (user.docs.first.data()
+                            //         as dynamic)['userId'];
+                            //   });
+                            // }).onError((error, stackTrace) => null);
+                            setState(() {
+                              serachQuery = value;
+                            });
                           },
-                          // inputFormatters: [
-                          //   LengthLimitingTextInputFormatter(10),
-                          //   FilteringTextInputFormatter.digitsOnly,
-                          // ]
-                          // validator: (value) =>
-                          //     value!.isEmpty ? 'Enter the amount' : null,
                         ),
-                        userName != ""
-                            ? Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  CustomTextBox(
-                                    textValue: userName!,
-                                    textSize: 4.0,
-                                    textWeight: FontWeight.normal,
-                                    typeAlign: Alignment.topLeft,
-                                    captionAlign: TextAlign.left,
-                                    textColor: secondaryColor,
-                                  ),
-                                  CustomTextBox(
-                                    textValue: 'User Id: ' + userId!,
-                                    textSize: 4.0,
-                                    textWeight: FontWeight.normal,
-                                    typeAlign: Alignment.topLeft,
-                                    captionAlign: TextAlign.left,
-                                    textColor: secondaryColor,
-                                  ),
-                                  IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        uid = "";
-                                        userName = "";
-                                        userId = "";
-                                      });
-                                    },
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: red,
-                                    ),
-                                  ),
-                                ],
+                        serachQuery != ""
+                            ? SizedBox(
+                                height: height * 30,
+                                child: FutureBuilder<QuerySnapshot>(
+                                  future: usersCollection
+                                      .where('companyName',
+                                          isEqualTo: userDetails!.companyName)
+                                      .where('isUser', isEqualTo: true)
+                                      .where('searchQuery', arrayContainsAny: [
+                                    serachQuery!.toLowerCase()
+                                  ]).get(),
+                                  // initialData: InitialData,
+                                  builder: (BuildContext context,
+                                      AsyncSnapshot snapshot) {
+                                    if (snapshot.connectionState !=
+                                        ConnectionState.done) {
+                                      return const Loading();
+                                    } else {
+                                      if (snapshot.hasData) {
+                                        final users =
+                                            snapshot.data!.docs.toList();
+                                        return ListView.builder(
+                                          itemCount: users.length,
+                                          itemBuilder: (context, index) {
+                                            return
+                                                // UserCardSearch(
+                                                //   // userId: users[index]['userId'],
+                                                //   userProfile: users[index],
+                                                //   isAdmin: userDetails.isAdmin,
+                                                // );
+                                                GestureDetector(
+                                              child: Card(
+                                                color: backgroundColor,
+                                                child: ListTile(
+                                                  title: Text(
+                                                    (users[index].data()
+                                                                as dynamic)[
+                                                            'firstName'] +
+                                                        ' ' +
+                                                        (users[index].data()
+                                                                as dynamic)[
+                                                            'lastName'],
+                                                    style: const TextStyle(
+                                                      color: black,
+                                                      fontSize: 18.0,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                  ),
+                                                  subtitle: Text(
+                                                    (users[index].data()
+                                                        as dynamic)['userId'],
+                                                    style: const TextStyle(
+                                                      color: Color(0xff8d99ae),
+                                                    ),
+                                                  ),
+                                                  trailing: const Icon(
+                                                    Icons.chevron_right,
+                                                    size: 40,
+                                                  ),
+                                                  // trailing: isLoading == true
+                                                  //     ? const CircularProgressIndicator(
+                                                  //         backgroundColor: Color(0xffD90429),
+                                                  //         valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                                  //       )
+                                                  //     : IconButton(
+                                                  //         onPressed: () async {
+                                                  //           setState(() {
+                                                  //             isLoading = true;
+                                                  //           });
+                                                  //           await userDeletionCollection.add({
+                                                  //             "uid": FieldValue.arrayUnion([widget.userProfile!.id]),
+                                                  //           });
+                                                  //           setState(() {
+                                                  //             isLoading = false;
+                                                  //           });
+                                                  //         },
+                                                  //         icon: const Icon(
+                                                  //           Icons.delete,
+                                                  //           color: Colors.red,
+                                                  //         ),
+                                                  //       ),
+                                                ),
+                                              ),
+                                              onTap: () {
+                                                setState(() {
+                                                  controller.text =
+                                                      (users[index].data()
+                                                                  as dynamic)[
+                                                              'firstName'] +
+                                                          " " +
+                                                          (users[index].data()
+                                                                  as dynamic)[
+                                                              'lastName'];
+                                                  serachQuery = "";
+                                                  uid = users[index].id;
+                                                  userName =
+                                                      (users[index].data()
+                                                                  as dynamic)[
+                                                              'firstName'] +
+                                                          " " +
+                                                          (users[index].data()
+                                                                  as dynamic)[
+                                                              'lastName'];
+
+                                                  userId = (users[index].data()
+                                                      as dynamic)['userId'];
+                                                });
+                                              },
+                                            );
+                                          },
+                                        );
+                                      } else {
+                                        return const Loading();
+                                      }
+                                    }
+                                  },
+                                ),
                               )
                             : const SizedBox(),
+                        // userName != ""
+                        //     ? Row(
+                        //         mainAxisAlignment:
+                        //             MainAxisAlignment.spaceBetween,
+                        //         children: [
+                        //           CustomTextBox(
+                        //             textValue: userName!,
+                        //             textSize: 4.0,
+                        //             textWeight: FontWeight.normal,
+                        //             typeAlign: Alignment.topLeft,
+                        //             captionAlign: TextAlign.left,
+                        //             textColor: secondaryColor,
+                        //           ),
+                        //           CustomTextBox(
+                        //             textValue: 'User Id: ${userId!}',
+                        //             textSize: 4.0,
+                        //             textWeight: FontWeight.normal,
+                        //             typeAlign: Alignment.topLeft,
+                        //             captionAlign: TextAlign.left,
+                        //             textColor: secondaryColor,
+                        //           ),
+                        //           args.userProfile != null
+                        //               ? const SizedBox()
+                        //               : IconButton(
+                        //                   onPressed: () {
+                        //                     setState(() {
+                        //                       uid = "";
+                        //                       userName = "";
+                        //                       userId = "";
+                        //                     });
+                        //                   },
+                        //                   icon: const Icon(
+                        //                     Icons.close,
+                        //                     color: red,
+                        //                   ),
+                        //                 ),
+                        //         ],
+                        //       )
+                        //     : const SizedBox(),
                         SizedBox(height: height * 2),
                         CustomTextFormField(
                           label: 'Amount (${userDetails!.currency})',
@@ -188,6 +333,18 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                           inputFormatters: <TextInputFormatter>[
                             FilteringTextInputFormatter.digitsOnly
                           ],
+                          onChanged: (value) {
+                            setState(() {
+                              duration = "1 month";
+                              loanType = "Daily";
+                              interestRate = "";
+                              interestController.clear();
+                              monthlyInterest = roundDouble(0, 2);
+                              totalInterest = roundDouble(0, 2);
+                              monthlyCollection = roundDouble(0, 2);
+                              totalCollection = roundDouble(0, 2);
+                            });
+                          },
                         ),
                         SizedBox(height: height * 2),
                         Column(
@@ -225,6 +382,14 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                   onChanged: (String? newValue) {
                                     setState(() {
                                       duration = newValue!;
+
+                                      loanType = "Daily";
+                                      interestRate = "";
+                                      interestController.clear();
+                                      monthlyInterest = roundDouble(0, 2);
+                                      totalInterest = roundDouble(0, 2);
+                                      monthlyCollection = roundDouble(0, 2);
+                                      totalCollection = roundDouble(0, 2);
                                     });
                                   },
                                   items: <String>[
@@ -287,6 +452,13 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                   onChanged: (String? newValue) {
                                     setState(() {
                                       loanType = newValue!;
+
+                                      interestRate = "";
+                                      interestController.clear();
+                                      monthlyInterest = roundDouble(0, 2);
+                                      totalInterest = roundDouble(0, 2);
+                                      monthlyCollection = roundDouble(0, 2);
+                                      totalCollection = roundDouble(0, 2);
                                     });
                                   },
                                   items: <String>[
@@ -313,7 +485,7 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                         CustomTextFormField(
                           initialValue: "0",
                           label: 'Interest (0.00 - 400.00)%',
-                          // controller: interestController,
+                          controller: interestController,
                           onChanged: (String? value) {
                             setState(() {
                               interestRate = value;
@@ -325,19 +497,23 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                             (double.parse(
                                                     amountController.text) *
                                                 double.parse(interestRate!) *
-                                                0.01 /
-                                                (int.parse(duration!
-                                                    .split(' ')
-                                                    .first))),
+                                                0.01
+                                            // /
+                                            // (int.parse(duration!
+                                            //     .split(' ')
+                                            //     .first))
+                                            ),
                                             2)
                                         : monthlyInterest = roundDouble(
                                             (double.parse(
                                                     amountController.text) *
                                                 double.parse(interestRate!) *
-                                                0.01 /
-                                                (int.parse((duration)!
-                                                    .split(' ')
-                                                    .first))),
+                                                0.01
+                                            // /
+                                            // (int.parse((duration)!
+                                            //     .split(' ')
+                                            //     .first))
+                                            ),
                                             2);
 
                                 interestRate!.isEmpty
@@ -345,9 +521,13 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                     : duration! != "1 month"
                                         ? totalInterest = roundDouble(
                                             (double.parse(
-                                                    amountController.text) *
-                                                double.parse(interestRate!) *
-                                                0.01),
+                                                        amountController.text) *
+                                                    double.parse(
+                                                        interestRate!) *
+                                                    0.01) *
+                                                (int.parse((duration)!
+                                                    .split(' ')
+                                                    .first)),
                                             2)
                                         : totalInterest = roundDouble(
                                             (double.parse(
@@ -364,7 +544,7 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                                     amountController.text) *
                                                 (double.parse(interestRate!) +
                                                     100) *
-                                                0.01 /
+                                                0.01 *
                                                 (int.parse(duration!
                                                     .split(' ')
                                                     .first))),
@@ -374,10 +554,12 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                                     amountController.text) *
                                                 (double.parse(interestRate!) +
                                                     100) *
-                                                0.01 /
-                                                (int.parse((duration)!
-                                                    .split(' ')
-                                                    .first))),
+                                                0.01
+                                            // /
+                                            // (int.parse((duration)!
+                                            //     .split(' ')
+                                            //     .first))
+                                            ),
                                             2);
 
                                 interestRate!.isEmpty
@@ -388,7 +570,10 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                                     amountController.text) *
                                                 (double.parse(interestRate!) +
                                                     100) *
-                                                0.01),
+                                                0.01 *
+                                                (int.parse(duration!
+                                                    .split(' ')
+                                                    .first))),
                                             2)
                                         : totalCollection = roundDouble(
                                             (double.parse(
@@ -405,10 +590,10 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                             (double.parse(
                                                     amountController.text) *
                                                 double.parse(interestRate!) *
-                                                0.01 /
+                                                0.01 *
                                                 ((int.parse(duration!
                                                         .split(' ')
-                                                        .first)) *
+                                                        .first)) /
                                                     30)),
                                             2)
                                         : monthlyInterest = roundDouble(
@@ -416,10 +601,7 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                                     amountController.text) *
                                                 double.parse(interestRate!) *
                                                 0.01 /
-                                                ((int.parse((duration)!
-                                                        .split(' ')
-                                                        .first)) *
-                                                    30)),
+                                                30),
                                             2);
 
                                 interestRate!.isEmpty
@@ -429,7 +611,10 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                             (double.parse(
                                                     amountController.text) *
                                                 double.parse(interestRate!) *
-                                                0.01),
+                                                0.01 *
+                                                (int.parse(duration!
+                                                    .split(' ')
+                                                    .first))),
                                             2)
                                         : totalInterest = roundDouble(
                                             (double.parse(
@@ -446,10 +631,10 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                                     amountController.text) *
                                                 (double.parse(interestRate!) +
                                                     100) *
-                                                0.01 /
+                                                0.01 *
                                                 ((int.parse(duration!
                                                         .split(' ')
-                                                        .first)) *
+                                                        .first)) /
                                                     30)),
                                             2)
                                         : monthlyCollection = roundDouble(
@@ -458,10 +643,7 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                                 (double.parse(interestRate!) +
                                                     100) *
                                                 0.01 /
-                                                ((int.parse(duration!
-                                                        .split(' ')
-                                                        .first)) *
-                                                    30)),
+                                                30),
                                             2);
 
                                 interestRate!.isEmpty
@@ -472,7 +654,10 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                                     amountController.text) *
                                                 (double.parse(interestRate!) +
                                                     100) *
-                                                0.01),
+                                                0.01 *
+                                                (int.parse(duration!
+                                                    .split(' ')
+                                                    .first))),
                                             2)
                                         : totalCollection = roundDouble(
                                             (double.parse(
@@ -510,7 +695,7 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                               textColor: black,
                             ),
                             CustomTextBox(
-                              textValue: interestRate! + "%",
+                              textValue: "${interestRate!}%",
                               textSize: 4.0,
                               textWeight: FontWeight.normal,
                               typeAlign: Alignment.topLeft,
@@ -535,13 +720,10 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                             ),
                             CustomTextBox(
                               textValue: interestRate!.isEmpty
-                                  ? "${userDetails.currency} " +
-                                      monthlyInterest.toString()
+                                  ? "${userDetails.currency} $monthlyInterest"
                                   : duration != "1 month"
-                                      ? "${userDetails.currency} " +
-                                          monthlyInterest.toString()
-                                      : "${userDetails.currency} " +
-                                          monthlyInterest.toString(),
+                                      ? "${userDetails.currency} $monthlyInterest"
+                                      : "${userDetails.currency} $monthlyInterest",
                               textSize: 4.0,
                               textWeight: FontWeight.normal,
                               typeAlign: Alignment.topLeft,
@@ -564,13 +746,10 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                             ),
                             CustomTextBox(
                               textValue: interestRate!.isEmpty
-                                  ? "${userDetails.currency} " +
-                                      totalInterest.toString()
+                                  ? "${userDetails.currency} $totalInterest"
                                   : duration! != "1 month"
-                                      ? "${userDetails.currency} " +
-                                          totalInterest.toString()
-                                      : "${userDetails.currency} " +
-                                          (totalInterest.toString()),
+                                      ? "${userDetails.currency} $totalInterest"
+                                      : "${userDetails.currency} $totalInterest",
                               textSize: 4.0,
                               textWeight: FontWeight.bold,
                               typeAlign: Alignment.topLeft,
@@ -595,13 +774,10 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                             ),
                             CustomTextBox(
                               textValue: interestRate!.isEmpty
-                                  ? "${userDetails.currency} " +
-                                      monthlyCollection.toString()
+                                  ? "${userDetails.currency} $monthlyCollection"
                                   : duration != "1 month"
-                                      ? "${userDetails.currency} " +
-                                          monthlyCollection.toString()
-                                      : "${userDetails.currency} " +
-                                          monthlyCollection.toString(),
+                                      ? "${userDetails.currency} $monthlyCollection"
+                                      : "${userDetails.currency} $monthlyCollection",
                               textSize: 4.0,
                               textWeight: FontWeight.normal,
                               typeAlign: Alignment.topLeft,
@@ -625,6 +801,7 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                 'totalInterest': totalInterest,
                                 'monthlyCollection': monthlyCollection,
                                 'totalCollection': totalCollection,
+                                'balance': totalCollection,
                                 'status': "accepted",
                                 'acceptedDate': formattedDate,
                                 'user': uid,
@@ -635,6 +812,13 @@ class _GiveNewLoanState extends State<GiveNewLoan> {
                                 'companyName': userDetails.companyName,
                                 'currency': userDetails.currency,
                                 'createdDate': "",
+                                'collectedMoney': 0.00,
+                                'extentionStartDate': "",
+                                'extentionEndDate': "",
+                                'extentionDuration': 0,
+                                "notPaidDates": [],
+                                "extendedDates": [],
+                                'extraChange': 0.00,
                               });
 
                               showModalBottomSheet(

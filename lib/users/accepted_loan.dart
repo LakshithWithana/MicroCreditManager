@@ -9,8 +9,10 @@ import 'package:mcm/shared/colors.dart';
 import 'package:mcm/shared/text.dart';
 import 'package:provider/provider.dart';
 
+import '../reusable_components/custom_elevated_buttons.dart';
+
 class AcceptedLoan extends StatefulWidget {
-  AcceptedLoan({Key? key}) : super(key: key);
+  const AcceptedLoan({Key? key}) : super(key: key);
 
   @override
   State<AcceptedLoan> createState() => _AcceptedLoanState();
@@ -37,6 +39,18 @@ class _AcceptedLoanState extends State<AcceptedLoan> {
                 backgroundColor: Colors.transparent,
                 iconTheme: const IconThemeData(color: mainColor),
                 elevation: 0.0,
+                actions: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: width * 5.0, vertical: width * 2.0),
+                    child: PositiveHalfElevatedButton(
+                      label: 'Refresh',
+                      onPressed: () {
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ],
               ),
               body: Padding(
                 padding: EdgeInsets.fromLTRB(width * 5.1, 0, width * 5.1, 0.0),

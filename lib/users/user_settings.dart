@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
-import 'package:mcm/reusable_components/loading.dart';
 import 'package:mcm/services/auth_services.dart';
-import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../models/user_model.dart';
-import '../reusable_components/ratings.dart';
-import '../services/database_services.dart';
 import '../shared/colors.dart';
 import '../shared/text.dart';
 
 class UserSettings extends StatefulWidget {
-  UserSettings({Key? key}) : super(key: key);
+  const UserSettings({Key? key}) : super(key: key);
 
   @override
   _UserSettingsState createState() => _UserSettingsState();
 }
 
 class _UserSettingsState extends State<UserSettings> {
-  AuthServices _authServices = AuthServices();
+  final AuthServices _authServices = AuthServices();
 
   @override
   Widget build(BuildContext context) {
@@ -61,13 +56,58 @@ class _UserSettingsState extends State<UserSettings> {
                   textColor: black,
                 ),
               ),
-              SizedBox(height: height * 50),
+              SizedBox(height: height * 1),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/changePassword');
+                },
+                icon: const Icon(Icons.password),
+                label: CustomTextBox(
+                  textValue: "Change Password",
+                  textSize: 5,
+                  textWeight: FontWeight.normal,
+                  typeAlign: Alignment.topLeft,
+                  captionAlign: TextAlign.left,
+                  textColor: black,
+                ),
+              ),
+              SizedBox(height: height * 1),
+              TextButton.icon(
+                onPressed: () {
+                  _launchTermsURL();
+                },
+                icon: const Icon(Icons.gavel),
+                label: CustomTextBox(
+                  textValue: "Terms & Conditions",
+                  textSize: 5,
+                  textWeight: FontWeight.normal,
+                  typeAlign: Alignment.topLeft,
+                  captionAlign: TextAlign.left,
+                  textColor: black,
+                ),
+              ),
+              SizedBox(height: height * 1),
+              TextButton.icon(
+                onPressed: () {
+                  _launchPrivacyURL();
+                },
+                icon: const Icon(Icons.lock),
+                label: CustomTextBox(
+                  textValue: "Privacy Policies",
+                  textSize: 5,
+                  textWeight: FontWeight.normal,
+                  typeAlign: Alignment.topLeft,
+                  captionAlign: TextAlign.left,
+                  textColor: black,
+                ),
+              ),
+              SizedBox(height: height * 40),
               TextButton.icon(
                 onPressed: () async {
                   Navigator.pop(context);
                   await _authServices.signOut();
                 },
-                icon: Icon(Icons.logout),
+                icon: const Icon(Icons.logout),
                 label: CustomTextBox(
                   textValue: "Log out",
                   textSize: 5,
@@ -82,5 +122,23 @@ class _UserSettingsState extends State<UserSettings> {
         ),
       ),
     );
+  }
+}
+
+void _launchTermsURL() async {
+  const url = 'https://pages.flycricket.io/mcm-0/terms.html';
+  if (await canLaunchUrl(Uri.parse(url))) {
+    await launch(url, forceWebView: true, webOnlyWindowName: "Terms");
+  } else {
+    throw 'Could not launch $url';
+  }
+}
+
+void _launchPrivacyURL() async {
+  const url = 'https://pages.flycricket.io/mcm-0/privacy.html';
+  if (await canLaunchUrl(Uri.parse(url))) {
+    await launch(url, forceWebView: true, webOnlyWindowName: "Terms");
+  } else {
+    throw 'Could not launch $url';
   }
 }

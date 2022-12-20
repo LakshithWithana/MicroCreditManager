@@ -5,7 +5,6 @@ import 'package:date_time_picker/date_time_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mcm/admins/models/single_collection_model.dart';
-import 'package:mcm/admins/view_pdf.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
@@ -21,7 +20,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 class Downloads extends StatefulWidget {
-  Downloads({Key? key}) : super(key: key);
+  const Downloads({Key? key}) : super(key: key);
 
   @override
   _DownloadsState createState() => _DownloadsState();
@@ -38,7 +37,7 @@ class _DownloadsState extends State<Downloads> {
     return pw.Container(
       height: 3,
       width: width,
-      decoration: pw.BoxDecoration(
+      decoration: const pw.BoxDecoration(
         color: PdfColors.grey,
       ),
     );
@@ -50,7 +49,7 @@ class _DownloadsState extends State<Downloads> {
           .map((e) => pw.Container(
                 width: width,
                 child: pw.Text(
-                  " " + e,
+                  " $e",
                   style: textStyle,
                 ),
               ))
@@ -95,7 +94,7 @@ class _DownloadsState extends State<Downloads> {
   }
 
   pw.TextStyle textStyle2() {
-    return pw.TextStyle(
+    return const pw.TextStyle(
       color: PdfColors.grey,
       fontSize: 12,
     );
@@ -191,9 +190,9 @@ class _DownloadsState extends State<Downloads> {
                 divider(500),
                 spaceDivider(10),
                 pw.Container(
-                  color: PdfColor.fromInt(0xFF80FFDB),
+                  color: const PdfColor.fromInt(0xFF80FFDB),
                   child: pw.Padding(
-                    padding: pw.EdgeInsets.all(10.0),
+                    padding: const pw.EdgeInsets.all(10.0),
                     child: pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
@@ -202,13 +201,13 @@ class _DownloadsState extends State<Downloads> {
                           children: [
                             pw.Text(
                               '${userDetails.companyName}',
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                   fontSize: 20, color: PdfColors.black),
                             ),
                             spaceDivider(5),
                             pw.Text(
                               "Downloaded Report",
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                   fontSize: 16, color: PdfColors.grey),
                             ),
                           ],
@@ -225,8 +224,8 @@ class _DownloadsState extends State<Downloads> {
                   width: 500,
                   decoration: pw.BoxDecoration(
                     border: pw.Border.all(
-                      color:
-                          PdfColor.fromInt(0xFF80FFDB), // red as border color
+                      color: const PdfColor.fromInt(
+                          0xFF80FFDB), // red as border color
                     ),
                   ),
                   child: pw.Row(
@@ -236,7 +235,7 @@ class _DownloadsState extends State<Downloads> {
                         height: 80,
                         width: 180,
                         child: pw.Padding(
-                          padding: pw.EdgeInsets.all(10.0),
+                          padding: const pw.EdgeInsets.all(10.0),
                           child: pw.Column(
                             mainAxisAlignment:
                                 pw.MainAxisAlignment.spaceBetween,
@@ -247,14 +246,12 @@ class _DownloadsState extends State<Downloads> {
                                 children: [
                                   pw.Text(
                                     'Downloaded by:',
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.black),
                                   ),
                                   pw.Text(
-                                    userDetails.firstName! +
-                                        " " +
-                                        userDetails.lastName!,
-                                    style: pw.TextStyle(
+                                    "${userDetails.firstName!} ${userDetails.lastName!}",
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.grey),
                                   ),
                                 ],
@@ -265,12 +262,12 @@ class _DownloadsState extends State<Downloads> {
                                 children: [
                                   pw.Text(
                                     'Date:',
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.black),
                                   ),
                                   pw.Text(
                                     formattedDate,
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.grey),
                                   ),
                                 ],
@@ -281,14 +278,14 @@ class _DownloadsState extends State<Downloads> {
                                 children: [
                                   pw.Text(
                                     'Controller type:',
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.black),
                                   ),
                                   pw.Text(
                                     userDetails.isAdmin == true
                                         ? "Admin"
                                         : "Agent",
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.grey),
                                   ),
                                 ],
@@ -301,8 +298,8 @@ class _DownloadsState extends State<Downloads> {
                         height: 80,
                         width: 150,
                         child: pw.Padding(
-                          padding:
-                              pw.EdgeInsets.fromLTRB(0.0, 10.0, 10.0, 10.0),
+                          padding: const pw.EdgeInsets.fromLTRB(
+                              0.0, 10.0, 10.0, 10.0),
                           child: pw.Column(
                             mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                             children: [
@@ -312,12 +309,12 @@ class _DownloadsState extends State<Downloads> {
                                 children: [
                                   pw.Text(
                                     'From:',
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.black),
                                   ),
                                   pw.Text(
                                     fromDate,
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.grey),
                                   ),
                                 ],
@@ -328,12 +325,12 @@ class _DownloadsState extends State<Downloads> {
                                 children: [
                                   pw.Text(
                                     'To',
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.black),
                                   ),
                                   pw.Text(
                                     toDate,
-                                    style: pw.TextStyle(
+                                    style: const pw.TextStyle(
                                         fontSize: 12, color: PdfColors.grey),
                                   ),
                                 ],
@@ -348,7 +345,8 @@ class _DownloadsState extends State<Downloads> {
                 spaceDivider(20),
                 pw.Text(
                   'COLLECTIONS',
-                  style: pw.TextStyle(fontSize: 16, color: PdfColors.black),
+                  style:
+                      const pw.TextStyle(fontSize: 16, color: PdfColors.black),
                 ),
                 pw.Container(
                   color: PdfColors.white,
@@ -417,7 +415,8 @@ class _DownloadsState extends State<Downloads> {
                 spaceDivider(20),
                 pw.Text(
                   'EXPENSES',
-                  style: pw.TextStyle(fontSize: 18, color: PdfColors.black),
+                  style:
+                      const pw.TextStyle(fontSize: 18, color: PdfColors.black),
                 ),
                 pw.Container(
                   color: PdfColors.white,
@@ -514,7 +513,8 @@ class _DownloadsState extends State<Downloads> {
                 spaceDivider(20),
                 pw.Text(
                   'Comments:',
-                  style: pw.TextStyle(fontSize: 12, color: PdfColors.black),
+                  style:
+                      const pw.TextStyle(fontSize: 12, color: PdfColors.black),
                 ),
                 spaceDivider(30),
                 spaceDivider(30),
@@ -529,15 +529,18 @@ class _DownloadsState extends State<Downloads> {
       final file = File("${output.path}/example.pdf");
       await file.writeAsBytes(await pdf.save());
       PDFDocument doc = await PDFDocument.fromFile(file);
-      // await Printing.layoutPdf(
-      //     onLayout: (PdfPageFormat format) async => pdf.save());
-      // await Printing.sharePdf(
-      //     bytes: await pdf.save(), filename: 'my-document.pdf');
-      Navigator.pushNamed(
-        context,
-        '/viewPDF',
-        arguments: ViewPDFArgs(doc: doc),
-      );
+
+      await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => pdf.save());
+      await Printing.sharePdf(
+          bytes: await pdf.save(), filename: 'my-document.pdf');
+
+      // if (!mounted) return;
+      // Navigator.pushNamed(
+      //   context,
+      //   '/viewPDF',
+      //   arguments: ViewPDFArgs(doc: doc),
+      // );
     }
     // }
 
@@ -588,9 +591,9 @@ class _DownloadsState extends State<Downloads> {
                           SizedBox(
                             width: width * 40,
                             child: DateTimePicker(
-                              icon: Icon(Icons.calendar_month),
+                              icon: const Icon(Icons.calendar_month),
                               initialValue: DateTime.now()
-                                  .subtract(Duration(days: 30))
+                                  .subtract(const Duration(days: 30))
                                   .toString(),
                               firstDate: DateTime(2000),
                               lastDate: DateTime(2100),
@@ -627,7 +630,7 @@ class _DownloadsState extends State<Downloads> {
                           SizedBox(
                             width: width * 40,
                             child: DateTimePicker(
-                              icon: Icon(Icons.calendar_month),
+                              icon: const Icon(Icons.calendar_month),
                               initialValue: DateTime.now().toString(),
                               firstDate: DateTime(2000),
                               lastDate: DateTime(2100),
@@ -695,6 +698,11 @@ class _DownloadsState extends State<Downloads> {
                                 model.totalProfit,
                                 model.totalExpenses,
                               );
+                              // Navigator.pushNamed(
+                              //   context,
+                              //   '/viewPDF',
+                              //   arguments: ViewPDFArgs(doc: doc!),
+                              // );
                             },
                           );
                         },
@@ -958,7 +966,7 @@ class _SingleCollectionState extends State<SingleCollection> {
                       ),
                     );
                   } else {
-                    return Loading();
+                    return const Loading();
                   }
                 },
               ),
@@ -1009,12 +1017,12 @@ class _SingleCollectionState extends State<SingleCollection> {
                     ],
                   ),
                 ),
-                SizedBox(width: 30),
+                const SizedBox(width: 30),
                 ElevatedButton(
                   onPressed: () {
                     gettingSum();
                   },
-                  child: Text("Get total"),
+                  child: const Text("Get total"),
                 ),
               ],
             ),
@@ -1081,7 +1089,7 @@ class SingleExpense extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Container(
+      child: SizedBox(
         width: 700,
         child: Column(
           children: [
@@ -1224,7 +1232,7 @@ class SingleExpense extends StatelessWidget {
                       ),
                     );
                   } else {
-                    return Loading();
+                    return const Loading();
                   }
                 },
               ),
@@ -1257,7 +1265,7 @@ class SingleExpense extends StatelessWidget {
                   onPressed: () {
                     gettingSum();
                   },
-                  child: Text("Get total"),
+                  child: const Text("Get total"),
                 ),
               ],
             ),

@@ -2,11 +2,9 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:mcm/models/user_model.dart';
 import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
-import 'package:mcm/reusable_components/custom_text_form_field.dart';
 import 'package:mcm/reusable_components/loading.dart';
 import 'package:mcm/services/database_services.dart';
 import 'package:mcm/shared/colors.dart';
@@ -20,7 +18,7 @@ class ViewAcceptedLoanArgs {
 }
 
 class ViewAcceptedLoan extends StatefulWidget {
-  ViewAcceptedLoan({Key? key}) : super(key: key);
+  const ViewAcceptedLoan({Key? key}) : super(key: key);
 
   @override
   State<ViewAcceptedLoan> createState() => _ViewAcceptedLoanState();
@@ -67,6 +65,16 @@ class _ViewAcceptedLoanState extends State<ViewAcceptedLoan> {
     final loan = (args.loan!.data() as dynamic);
 
     String formattedDate = formatter.format(now);
+
+    setSearchParam(String customerID) {
+      List<String> customerSearchList = [];
+      String temp = "";
+      for (int i = 0; i < customerID.length; i++) {
+        temp = temp + customerID[i];
+        customerSearchList.add(temp);
+      }
+      return customerSearchList;
+    }
 
     return StreamBuilder<UserDetails>(
         stream: DatabaseServices(uid: user!.uid).userDetails,
@@ -261,8 +269,7 @@ class _ViewAcceptedLoanState extends State<ViewAcceptedLoan> {
                                     textColor: black,
                                   ),
                                   CustomTextBox(
-                                    textValue:
-                                        loan['interestRate'].toString() + " %",
+                                    textValue: "${loan['interestRate']} %",
                                     textSize: 4.0,
                                     textWeight: FontWeight.normal,
                                     typeAlign: Alignment.topLeft,
@@ -364,17 +371,8 @@ class _ViewAcceptedLoanState extends State<ViewAcceptedLoan> {
                                   ),
                                   CustomTextBox(
                                     textValue: loan['loanType'] == "Monthly"
-                                        ? "x " +
-                                            (int.parse((loan['duration'])!
-                                                    .split(' ')
-                                                    .first))
-                                                .toString()
-                                        : "x " +
-                                            (int.parse((loan['duration'])!
-                                                        .split(' ')
-                                                        .first) *
-                                                    30)
-                                                .toString(),
+                                        ? "x ${int.parse((loan['duration'])!.split(' ').first)}"
+                                        : "x ${int.parse((loan['duration'])!.split(' ').first) * 30}",
                                     textSize: 4.0,
                                     textWeight: FontWeight.normal,
                                     typeAlign: Alignment.topLeft,
@@ -431,7 +429,7 @@ class _ViewAcceptedLoanState extends State<ViewAcceptedLoan> {
                                             loan['duration'].split(' ').first));
                                     i++)
                                   formatter.format(DateTime(
-                                      year!, month! + i + 1, day!)): false,
+                                      year!, month! + i + 1, day!)): 0.00,
                               };
 
                             if (loan['loanType'] == "Daily")
@@ -445,38 +443,284 @@ class _ViewAcceptedLoanState extends State<ViewAcceptedLoan> {
                                             30;
                                     i++)
                                   formatter.format(DateTime(
-                                      year!, month!, day! + i + 1)): false,
+                                      year!, month!, day! + i + 1)): 0.00,
                               };
                           });
-                          await loanRequestsCollection
-                              .doc(args.loan!.id)
-                              .update({
-                            'status': "okayed",
-                            'okDate': formattedDate,
-                            'collectingDates': collectingDates,
-                            'extraChange': 0.00,
-                            'notPaidDates': [],
-                            'searchQuery': userDetails!.userId!.split("-").last,
-                          });
+                          // await loanRequestsCollection
+                          //     .doc(args.loan!.id)
+                          //     .update({
+                          //   'status': "okayed",
+                          //   'okDate': formattedDate,
+                          //   'collectingDates': collectingDates,
+                          //   'extraChange': 0.00,
+                          //   'notPaidDates': [],
+                          //   'extendedDates': [],
+                          //'searchQuery': setSearchParam(
+                          //          "${userDetails.firstName!.toLowerCase()} ${userDetails.lastName!.toLowerCase()}"),
+                          // });
                           await usersCollection
                               .where('companyName',
-                                  isEqualTo: userDetails.companyName)
+                                  isEqualTo: userDetails!.companyName)
                               .where('isAdmin', isEqualTo: true)
                               .get()
-                              .then((snapshot) {
-                            setState(() {
-                              capital = (((snapshot.docs.first.data()
-                                          as dynamic)['capitalAmount'])
-                                      .toDouble() -
-                                  (loan['amount']));
-                              totalLoans = ((snapshot.docs.first.data()
-                                      as dynamic)['totalLoans']) +
-                                  loan['amount'];
-                            });
-                            usersCollection.doc(snapshot.docs.first.id).update({
-                              'capitalAmount': capital,
-                              'totalLoans': totalLoans,
-                            });
+                              .then((snapshot) async {
+                            if (((snapshot.docs.first.data()
+                                        as dynamic)['collectionTotal'])
+                                    .toDouble() >=
+                                loan['amount']) {
+                              await loanRequestsCollection
+                                  .doc(args.loan!.id)
+                                  .update({
+                                'status': "okayed",
+                                'okDate': formattedDate,
+                                'collectingDates': collectingDates,
+                                'extraChange': 0.00,
+                                'notPaidDates': [],
+                                'extendedDates': [],
+                                'searchQuery': setSearchParam(
+                                    "${userDetails.firstName!.toLowerCase()} ${userDetails.lastName!.toLowerCase()}"),
+                                'from': "collection",
+                                'collectedMoney': 0.00,
+                              });
+                              await usersCollection
+                                  .doc(snapshot.docs.first.id)
+                                  .update({
+                                'collectionTotal':
+                                    FieldValue.increment(-loan['amount']),
+                                'totalLoans':
+                                    FieldValue.increment(loan['amount']),
+                              });
+                              await loansCollection.doc().set({
+                                'amount': loan['amount'],
+                                'date': formattedDate,
+                                'from': "collection",
+                                'loanId': args.loan!.id,
+                                'companyName': loan['companyName'],
+                              });
+                              showModalBottomSheet<void>(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Container(
+                                      height: 200,
+                                      color: backgroundColor,
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            CustomTextBox(
+                                              textValue:
+                                                  "You have added the loan successfuly into your account.",
+                                              textSize: 4.0,
+                                              textWeight: FontWeight.normal,
+                                              typeAlign: Alignment.topLeft,
+                                              captionAlign: TextAlign.left,
+                                              textColor: black,
+                                            ),
+                                            PositiveHalfElevatedButton(
+                                              label: "OK",
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            } else if (((snapshot.docs.first.data()
+                                        as dynamic)['totalDeposits'])
+                                    .toDouble() >=
+                                loan['amount']) {
+                              await loanRequestsCollection
+                                  .doc(args.loan!.id)
+                                  .update({
+                                'status': "okayed",
+                                'okDate': formattedDate,
+                                'collectingDates': collectingDates,
+                                'extraChange': 0.00,
+                                'notPaidDates': [],
+                                'extendedDates': [],
+                                'searchQuery': setSearchParam(
+                                    "${userDetails.firstName!.toLowerCase()} ${userDetails.lastName!.toLowerCase()}"),
+                                'from': "deposits",
+                                'collectedMoney': 0.00,
+                              });
+                              await usersCollection
+                                  .doc(snapshot.docs.first.id)
+                                  .update({
+                                'totalDeposits':
+                                    FieldValue.increment(-loan['amount']),
+                                'totalLoans':
+                                    FieldValue.increment(loan['amount']),
+                              });
+                              await loansCollection.doc().set({
+                                'amount': loan['amount'],
+                                'date': formattedDate,
+                                'from': "collection",
+                                'loanId': args.loan!.id,
+                                'companyName': loan['companyName'],
+                              });
+                              showModalBottomSheet<void>(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Container(
+                                      height: 200,
+                                      color: backgroundColor,
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            CustomTextBox(
+                                              textValue:
+                                                  "You have added the loan successfuly into your account.",
+                                              textSize: 4.0,
+                                              textWeight: FontWeight.normal,
+                                              typeAlign: Alignment.topLeft,
+                                              captionAlign: TextAlign.left,
+                                              textColor: black,
+                                            ),
+                                            PositiveHalfElevatedButton(
+                                              label: "OK",
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+                            // else if (((snapshot.docs.first.data()
+                            //             as dynamic)['capitalAmount'])
+                            //         .toDouble() >=
+                            //     loan['amount']) {
+                            //   await loanRequestsCollection
+                            //       .doc(args.loan!.id)
+                            //       .update({
+                            //     'status': "okayed",
+                            //     'okDate': formattedDate,
+                            //     'collectingDates': collectingDates,
+                            //     'extraChange': 0.00,
+                            //     'notPaidDates': [],
+                            //     'extendedDates': [],
+                            //     'searchQuery': setSearchParam(
+                            //         "${userDetails.firstName!.toLowerCase()} ${userDetails.lastName!.toLowerCase()}"),
+                            //     'from': "capital",
+                            //   });
+                            //   await usersCollection
+                            //       .doc(snapshot.docs.first.id)
+                            //       .update({
+                            //     'capitalAmount':
+                            //         FieldValue.increment(-loan['amount']),
+                            //     'totalLoans':
+                            //         FieldValue.increment(loan['amount']),
+                            //   });
+                            //   showModalBottomSheet<void>(
+                            //     context: context,
+                            //     builder: (BuildContext context) {
+                            //       return Padding(
+                            //         padding: const EdgeInsets.all(8.0),
+                            //         child: Container(
+                            //           height: 200,
+                            //           color: backgroundColor,
+                            //           child: Center(
+                            //             child: Column(
+                            //               mainAxisAlignment:
+                            //                   MainAxisAlignment.center,
+                            //               mainAxisSize: MainAxisSize.min,
+                            //               children: <Widget>[
+                            //                 CustomTextBox(
+                            //                   textValue:
+                            //                       "You have added the loan successfuly into your account.",
+                            //                   textSize: 4.0,
+                            //                   textWeight: FontWeight.normal,
+                            //                   typeAlign: Alignment.topLeft,
+                            //                   captionAlign: TextAlign.left,
+                            //                   textColor: black,
+                            //                 ),
+                            //                 PositiveHalfElevatedButton(
+                            //                   label: "OK",
+                            //                   onPressed: () {
+                            //                     Navigator.pop(context);
+                            //                     Navigator.pop(context);
+                            //                   },
+                            //                 ),
+                            //               ],
+                            //             ),
+                            //           ),
+                            //         ),
+                            //       );
+                            //     },
+                            //   );
+                            // }
+                            else {
+                              showModalBottomSheet<void>(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Container(
+                                      height: 200,
+                                      color: backgroundColor,
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            CustomTextBox(
+                                              textValue:
+                                                  "Loan adding not completed. Please Contact the relevant company.",
+                                              textSize: 4.0,
+                                              textWeight: FontWeight.normal,
+                                              typeAlign: Alignment.topLeft,
+                                              captionAlign: TextAlign.left,
+                                              textColor: black,
+                                            ),
+                                            PositiveHalfElevatedButton(
+                                              label: "OK",
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+                            //----------------------------------------------
+                            // setState(() {
+                            //   capital = (((snapshot.docs.first.data()
+                            //               as dynamic)['capitalAmount'])
+                            //           .toDouble() -
+                            //       (loan['amount']));
+                            //   totalLoans = ((snapshot.docs.first.data()
+                            //           as dynamic)['totalLoans']) +
+                            //       loan['amount'];
+                            // });
+                            // usersCollection.doc(snapshot.docs.first.id).update({
+                            //   'capitalAmount': capital,
+                            //   'totalLoans': totalLoans,
+                            // });
                           });
                           // await transactionsCollection.doc().set({
                           //   'type':'loan',
@@ -488,43 +732,43 @@ class _ViewAcceptedLoanState extends State<ViewAcceptedLoan> {
                           //   'date' : formattedDate,
                           //   'dueAmount' :
                           // });
-                          showModalBottomSheet<void>(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Container(
-                                  height: 200,
-                                  color: backgroundColor,
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: <Widget>[
-                                        CustomTextBox(
-                                          textValue:
-                                              "You have added the loan successfuly into your account.",
-                                          textSize: 4.0,
-                                          textWeight: FontWeight.normal,
-                                          typeAlign: Alignment.topLeft,
-                                          captionAlign: TextAlign.left,
-                                          textColor: black,
-                                        ),
-                                        PositiveHalfElevatedButton(
-                                          label: "OK",
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            Navigator.pop(context);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
+                          // showModalBottomSheet<void>(
+                          //   context: context,
+                          //   builder: (BuildContext context) {
+                          //     return Padding(
+                          //       padding: const EdgeInsets.all(8.0),
+                          //       child: Container(
+                          //         height: 200,
+                          //         color: backgroundColor,
+                          //         child: Center(
+                          //           child: Column(
+                          //             mainAxisAlignment:
+                          //                 MainAxisAlignment.center,
+                          //             mainAxisSize: MainAxisSize.min,
+                          //             children: <Widget>[
+                          //               CustomTextBox(
+                          //                 textValue:
+                          //                     "You have added the loan successfuly into your account.",
+                          //                 textSize: 4.0,
+                          //                 textWeight: FontWeight.normal,
+                          //                 typeAlign: Alignment.topLeft,
+                          //                 captionAlign: TextAlign.left,
+                          //                 textColor: black,
+                          //               ),
+                          //               PositiveHalfElevatedButton(
+                          //                 label: "OK",
+                          //                 onPressed: () {
+                          //                   Navigator.pop(context);
+                          //                   Navigator.pop(context);
+                          //                 },
+                          //               ),
+                          //             ],
+                          //           ),
+                          //         ),
+                          //       ),
+                          //     );
+                          //   },
+                          // );
                         },
                       ),
                       SizedBox(height: height * 3),

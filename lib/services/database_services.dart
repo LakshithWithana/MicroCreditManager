@@ -20,6 +20,12 @@ final CollectionReference agentRequestsCollection =
 final CollectionReference loanRequestsCollection =
     FirebaseFirestore.instance.collection('loan_requests');
 
+final CollectionReference loansCollection =
+    FirebaseFirestore.instance.collection('loans');
+
+final CollectionReference loanMoneyCollectionCollection =
+    FirebaseFirestore.instance.collection('loan_money_collection');
+
 ///accounts collection reference
 final CollectionReference accountsCollection =
     FirebaseFirestore.instance.collection('accounts');
@@ -69,12 +75,12 @@ class DatabaseServices {
       password: (snapshot.data() as dynamic)['password'],
       firstName: (snapshot.data() as dynamic)['firstName'],
       lastName: (snapshot.data() as dynamic)['lastName'],
+      govtID: (snapshot.data() as dynamic)['govIdNumber'],
+      companyName: (snapshot.data() as dynamic)['companyName'],
       isUser: (snapshot.data() as dynamic)['isUser'],
       isAdmin: (snapshot.data() as dynamic)['isAdmin'],
       isSuperAdmin: (snapshot.data() as dynamic)['isSuperAdmin'],
       ownAccounts: (snapshot.data() as dynamic)['ownAccounts'],
-      companyName: (snapshot.data() as dynamic)['companyName'],
-      govtID: (snapshot.data() as dynamic)['govIdNumber'],
       isGovernmentRegistered:
           (snapshot.data() as dynamic)['governmentRegistered'],
       companyRegistrationNo:
@@ -83,9 +89,9 @@ class DatabaseServices {
       companyTelNo: (snapshot.data() as dynamic)['companyTelNo'],
       currency: (snapshot.data() as dynamic)['currency'],
       capitalAmount: ((snapshot.data() as dynamic)['capitalAmount']).toDouble(),
-      accountIds: (snapshot.data() as dynamic)['accountIds'],
       debt: (snapshot.data() as dynamic)['debt'],
       paidDebt: (snapshot.data() as dynamic)['paidDebt'],
+      accountIds: (snapshot.data() as dynamic)['accountIds'],
       viewCustomer: (snapshot.data() as dynamic)['viewCustomer'],
       viewAgent: (snapshot.data() as dynamic)['viewAgent'],
       deposits: (snapshot.data() as dynamic)['deposits'],
@@ -94,14 +100,15 @@ class DatabaseServices {
       accounts: (snapshot.data() as dynamic)['accounts'],
       statistics: (snapshot.data() as dynamic)['statistics'],
       downloads: (snapshot.data() as dynamic)['downloads'],
-      totalLoans: (snapshot.data() as dynamic)['totalLoans'],
       collection: (snapshot.data() as dynamic)['collection'],
       collectionTotal:
           (snapshot.data() as dynamic)['collectionTotal'].toDouble(),
       points: (snapshot.data() as dynamic)['points'],
       totalAgents: (snapshot.data() as dynamic)['totalAgents'],
       totalCustomers: (snapshot.data() as dynamic)['totalCustomers'],
-      totalDeposits: (snapshot.data() as dynamic)['totalDeposits'],
+      totalDeposits: (snapshot.data() as dynamic)['totalDeposits'].toDouble(),
+      totalLoans: (snapshot.data() as dynamic)['totalLoans'].toDouble(),
+      totalExpenses: (snapshot.data() as dynamic)['totalExpenses'].toDouble(),
     );
   }
 
@@ -150,7 +157,7 @@ class DatabaseServices {
       'country': country,
       'currency': currency,
       'companyTelNo': companyTelNo,
-      'capitalAmount': capitalAmount,
+      'capitalAmount': 0,
       'firstName': firstName,
       'lastName': lastName,
       'govIdNumber': govIdNumber,
@@ -177,7 +184,8 @@ class DatabaseServices {
       'points': 0,
       'totalCustomers': 0,
       'totalAgents': 0,
-      'totalDeposits': 0.00,
+      'totalDeposits': capitalAmount,
+      'totalExpenses': 0.00,
     });
     await accountsCollection.doc(uid).set({
       'accountId': accountIds![0],
@@ -194,8 +202,27 @@ class DatabaseServices {
       ],
     });
     await transactionsCollection.doc(uid).set({
+      'companyName': companyName,
       'createdDate': createdDate,
       'totalExpenses': 0,
+      'expenses': [],
     });
+  }
+
+  Future editUserData({
+    required String uid,
+    String? companyTelNo,
+    String? firstName,
+    String? lastName,
+  }) async {
+    await usersCollection
+        .doc(uid)
+        .update({
+          'companyTelNo': companyTelNo,
+          'firstName': firstName,
+          'lastName': lastName,
+        })
+        .then((value) => print("edit updated successfully"))
+        .onError((error, stackTrace) => print(error));
   }
 }

@@ -1,20 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:mcm/models/user_model.dart';
 import 'package:mcm/reusable_components/admin_view_loan_card.dart';
+import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
 import 'package:mcm/reusable_components/loading.dart';
 import 'package:mcm/services/database_services.dart';
+import 'package:mcm/services/revenuecat.dart';
 import 'package:mcm/shared/colors.dart';
-import 'package:mcm/shared/decorations.dart';
 import 'package:mcm/shared/text.dart';
 import 'package:provider/provider.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 class AdminHome extends StatefulWidget {
-  AdminHome({Key? key}) : super(key: key);
+  const AdminHome({Key? key}) : super(key: key);
 
   @override
   _AdminHomeState createState() => _AdminHomeState();
 }
+
+const int maxFailedLoadAttempts = 3;
 
 class _AdminHomeState extends State<AdminHome> {
   int? forLoans = 0;
@@ -26,6 +33,128 @@ class _AdminHomeState extends State<AdminHome> {
   String? loanTypeFilterValues = "All";
   String? searchString = "";
   List? searchStringArray = [];
+  double? capitalAmount = 0.00;
+  String? url = "";
+
+  // COMPLETE: Add a banner ad instance
+  BannerAd? _ad;
+  InterstitialAd? _interstitialAd;
+  int _numInterstitialLoadAttempts = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    BannerAd(
+      adUnitId: "ca-app-pub-8305805110829789/9002225884",
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _ad = ad as BannerAd;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          // Releases an ad resource when it fails to load
+          ad.dispose();
+          debugPrint(
+              'Ad load failed (code=${error.code} message=${error.message})');
+        },
+      ),
+    ).load();
+
+    _createInterstitialAd();
+  }
+
+  void _createInterstitialAd() {
+    InterstitialAd.load(
+        adUnitId: 'ca-app-pub-8305805110829789/9740524612',
+        request: const AdRequest(),
+        adLoadCallback: InterstitialAdLoadCallback(
+          onAdLoaded: (InterstitialAd ad) {
+            print('$ad loaded');
+            _interstitialAd = ad;
+            _numInterstitialLoadAttempts = 0;
+            _interstitialAd!.setImmersiveMode(true);
+          },
+          onAdFailedToLoad: (LoadAdError error) {
+            print('InterstitialAd failed to load: $error.');
+            _numInterstitialLoadAttempts += 1;
+            _interstitialAd = null;
+            if (_numInterstitialLoadAttempts < maxFailedLoadAttempts) {
+              _createInterstitialAd();
+            }
+          },
+        ));
+  }
+
+  void _showInterstitialAd({required function}) {
+    if (_interstitialAd == null) {
+      print('Warning: attempt to show interstitial before loaded.');
+      return;
+    }
+    _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (InterstitialAd ad) =>
+          print('ad onAdShowedFullScreenContent.'),
+      onAdDismissedFullScreenContent: (InterstitialAd ad) {
+        print('$ad onAdDismissedFullScreenContent.');
+        function;
+        ad.dispose();
+        _createInterstitialAd();
+      },
+      onAdFailedToShowFullScreenContent: (InterstitialAd ad, AdError error) {
+        print('$ad onAdFailedToShowFullScreenContent: $error');
+        ad.dispose();
+        _createInterstitialAd();
+      },
+    );
+    _interstitialAd!.show();
+    _interstitialAd = null;
+  }
+
+  // void _loadInterstitialAd() {
+  //   InterstitialAd.load(
+  //     adUnitId: 'ca-app-pub-8305805110829789/9740524612',
+  //     request: const AdRequest(),
+  //     adLoadCallback: InterstitialAdLoadCallback(
+  //       onAdLoaded: (ad) {
+  //         ad.fullScreenContentCallback = FullScreenContentCallback(
+  //           onAdDismissedFullScreenContent: (ad) {
+  //             // _moveToHome();
+  //             _numInterstitialLoadAttempts = 0;
+  //           },
+  //         );
+
+  //         setState(() {
+  //           _interstitialAd = ad;
+  //         });
+  //       },
+  //       onAdFailedToLoad: (err) {
+  //         print('Failed to load an interstitial ad: ${err.message}');
+  //       },
+  //     ),
+  //   );
+  // }
+
+  final GlobalKey<ScaffoldState> _key = GlobalKey<ScaffoldState>();
+  int _counter = 0;
+
+  handleDrawer() {
+    _key.currentState?.openDrawer();
+
+    setState(() {
+      ///DO MY API CALLS
+      _counter++;
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _ad?.dispose();
+    _interstitialAd?.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +164,7 @@ class _AdminHomeState extends State<AdminHome> {
 
     final user = Provider.of<mcmUser?>(context);
 
-    if (mounted == true) {
-      transactionsCollection.doc(user!.uid).get().then((value) {
-        // var res = (value.data() as dynamic)['totalExpenses'];
-
-        setState(() {
-          totalExpenses = (value.data() as dynamic)['totalExpenses'].toDouble();
-        });
-      });
-    }
+    final entitlement = Provider.of<RevenuecatProvider>(context).entitlement;
 
     return StreamBuilder<UserDetails>(
         stream: DatabaseServices(uid: user!.uid).userDetails,
@@ -51,8 +172,44 @@ class _AdminHomeState extends State<AdminHome> {
           if (snapshot.hasData) {
             UserDetails? userDetails = snapshot.data;
 
-            var okayedLoan = loanRequestsCollection
+            transactionsCollection
                 .where('companyName', isEqualTo: userDetails!.companyName)
+                .get()
+                .then((value) {
+              if (mounted) {
+                setState(() {
+                  totalExpenses =
+                      (value.docs.first.data() as dynamic)['totalExpenses']
+                          .toDouble();
+                });
+              }
+            });
+
+            getUrl() async {
+              final ref = FirebaseStorage.instance.ref().child(
+                  "${userDetails.companyName}/${userDetails.companyName}");
+              // no need of then file extension, the name will do fine.
+              // var urlLoaded = await ref.getDownloadURL();
+              // if (mounted) {
+              //   setState(() {
+              //     url = urlLoaded;
+              //   });
+              // }
+              await ref.getDownloadURL().then((value) {
+                if (mounted) {
+                  setState(() {
+                    url = value;
+                  });
+                }
+              }).catchError((e) => print(e.toString()));
+
+              print(url);
+            }
+
+            // getUrl();
+
+            var okayedLoan = loanRequestsCollection
+                .where('companyName', isEqualTo: userDetails.companyName)
                 .where('status', isEqualTo: 'okayed')
                 .get()
                 .then((value) {
@@ -65,7 +222,6 @@ class _AdminHomeState extends State<AdminHome> {
                 // }
               }
             });
-            // print(forLoans);
 
             loanRequestsCollection
                 .where('companyName', isEqualTo: userDetails.companyName)
@@ -86,8 +242,16 @@ class _AdminHomeState extends State<AdminHome> {
             });
 
             return Scaffold(
+              key: _key,
               backgroundColor: white,
               appBar: AppBar(
+                leading: IconButton(
+                  onPressed: () {
+                    getUrl();
+                    handleDrawer();
+                  },
+                  icon: const Icon(Icons.menu),
+                ),
                 backgroundColor: Colors.transparent,
                 iconTheme: const IconThemeData(color: mainColor),
                 elevation: 0.0,
@@ -159,13 +323,61 @@ class _AdminHomeState extends State<AdminHome> {
                       decoration: const BoxDecoration(
                         color: mainColor,
                       ),
-                      child: CustomTextBox(
-                        textValue: 'Micro Credit Manager',
-                        textSize: 4,
-                        textWeight: FontWeight.normal,
-                        typeAlign: Alignment.topLeft,
-                        captionAlign: TextAlign.left,
-                        textColor: black,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CustomTextBox(
+                                textValue: userDetails.companyName!,
+                                textSize: 5,
+                                textWeight: FontWeight.bold,
+                                typeAlign: Alignment.topLeft,
+                                captionAlign: TextAlign.left,
+                                textColor: black,
+                              ),
+                              CustomTextBox(
+                                textValue:
+                                    "${userDetails.firstName!} ${userDetails.lastName!}",
+                                textSize: 4,
+                                textWeight: FontWeight.normal,
+                                typeAlign: Alignment.topLeft,
+                                captionAlign: TextAlign.left,
+                                textColor: Colors.grey,
+                              ),
+                            ],
+                          ),
+                          url != ""
+                              ? Center(
+                                  child: Container(
+                                    height: 50.0,
+                                    width: 50.0,
+                                    decoration: BoxDecoration(
+                                        image: DecorationImage(
+                                            image: NetworkImage(
+                                              url!,
+                                            ),
+                                            fit: BoxFit.cover),
+                                        borderRadius: const BorderRadius.all(
+                                            Radius.circular(15))),
+                                  ),
+                                )
+                              : Center(
+                                  child: Container(
+                                    height: 50.0,
+                                    width: 50.0,
+                                    decoration: const BoxDecoration(
+                                        image: DecorationImage(
+                                            image: AssetImage(
+                                                "assets/images/MCM app icon.png"),
+                                            fit: BoxFit.cover),
+                                        borderRadius: BorderRadius.all(
+                                            Radius.circular(15))),
+                                  ),
+                                ),
+                        ],
                       ),
                     ),
                     ListTile(
@@ -207,10 +419,24 @@ class _AdminHomeState extends State<AdminHome> {
                               captionAlign: TextAlign.left,
                               textColor: black,
                             ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.pushNamed(context, '/viewAgents');
-                            },
+                            onTap: entitlement == Entitlement.allCourses
+                                ? () {
+                                    Navigator.pop(context);
+                                    Navigator.pushNamed(context, '/viewAgents');
+                                  }
+                                : _counter % 5 == 0
+                                    ? () {
+                                        Navigator.pop(context);
+                                        _showInterstitialAd(
+                                          function: Navigator.pushNamed(
+                                              context, '/viewAgents'),
+                                        );
+                                      }
+                                    : () {
+                                        Navigator.pop(context);
+                                        Navigator.pushNamed(
+                                            context, '/viewAgents');
+                                      },
                           )
                         : const SizedBox(),
                     // userDetails.deposits == true
@@ -252,10 +478,26 @@ class _AdminHomeState extends State<AdminHome> {
                               captionAlign: TextAlign.left,
                               textColor: black,
                             ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.pushNamed(context, '/expenses');
-                            },
+                            onTap: entitlement == Entitlement.allCourses
+                                ? () {
+                                    Navigator.pop(context);
+                                    Navigator.pushNamed(context, '/expenses');
+                                  }
+                                : _counter % 5 == 0
+                                    ? () {
+                                        Navigator.pop(context);
+                                        // Navigator.pushNamed(context, '/expenses');
+
+                                        _showInterstitialAd(
+                                          function: Navigator.pushNamed(
+                                              context, '/expenses'),
+                                        );
+                                      }
+                                    : () {
+                                        Navigator.pop(context);
+                                        Navigator.pushNamed(
+                                            context, '/expenses');
+                                      },
                           )
                         : const SizedBox(),
                     userDetails.accounts == true
@@ -268,40 +510,215 @@ class _AdminHomeState extends State<AdminHome> {
                               captionAlign: TextAlign.left,
                               textColor: black,
                             ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.pushNamed(context, '/accounts');
-                            },
+                            onTap: entitlement == Entitlement.allCourses
+                                ? () {
+                                    Navigator.pop(context);
+                                    Navigator.pushNamed(context, '/accounts');
+                                  }
+                                : _counter % 5 == 0
+                                    ? () {
+                                        Navigator.pop(context);
+                                        // Navigator.pushNamed(context, '/accounts');
+
+                                        _showInterstitialAd(
+                                          function: Navigator.pushNamed(
+                                              context, '/accounts'),
+                                        );
+                                      }
+                                    : () {
+                                        Navigator.pop(context);
+                                        Navigator.pushNamed(
+                                            context, '/accounts');
+                                      },
                           )
                         : const SizedBox(),
                     userDetails.statistics == true
-                        ? ListTile(
-                            title: CustomTextBox(
-                              textValue: 'Statistics',
-                              textSize: 5,
-                              textWeight: FontWeight.normal,
-                              typeAlign: Alignment.topLeft,
-                              captionAlign: TextAlign.left,
-                              textColor: black,
-                            ),
-                            onTap: () {},
-                          )
+                        ? entitlement == Entitlement.allCourses
+                            ? ListTile(
+                                title: CustomTextBox(
+                                  textValue: 'Statistics',
+                                  textSize: 5,
+                                  textWeight: FontWeight.normal,
+                                  typeAlign: Alignment.topLeft,
+                                  captionAlign: TextAlign.left,
+                                  textColor: black,
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.pushNamed(context, '/statistics');
+                                },
+                              )
+                            : ListTile(
+                                title: CustomTextBox(
+                                  textValue: 'Statistics',
+                                  textSize: 5,
+                                  textWeight: FontWeight.normal,
+                                  typeAlign: Alignment.topLeft,
+                                  captionAlign: TextAlign.left,
+                                  textColor: black,
+                                ),
+                                onTap: () async {
+                                  // Navigator.pop(context);
+                                  showModalBottomSheet(
+                                    isScrollControlled: true,
+                                    context: context,
+                                    backgroundColor: white,
+                                    builder: (BuildContext context) {
+                                      return Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            20.0, 20.0, 20.0, 40.0),
+                                        child: SizedBox(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Text(
+                                                  "You want to subscribe to activate this service"),
+                                              const SizedBox(height: 20.0),
+                                              PositiveElevatedButton(
+                                                label: "Buy Subscription",
+                                                onPressed: () async {
+                                                  try {
+                                                    Offerings offerings =
+                                                        await Purchases
+                                                            .getOfferings();
+                                                    PurchaserInfo
+                                                        purchaserInfo =
+                                                        await Purchases
+                                                            .purchasePackage(
+                                                                offerings
+                                                                    .current!
+                                                                    .availablePackages[0]);
+
+                                                    if (purchaserInfo
+                                                        .entitlements
+                                                        .all["Starter"]!
+                                                        .isActive) {
+                                                      // Unlock that great "pro" content
+                                                      print("Unlocked");
+                                                    }
+                                                  } on PlatformException catch (e) {
+                                                    var errorCode =
+                                                        PurchasesErrorHelper
+                                                            .getErrorCode(e);
+                                                    if (errorCode !=
+                                                        PurchasesErrorCode
+                                                            .purchaseCancelledError) {
+                                                      print(e);
+                                                    }
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              )
                         : const SizedBox(),
+                    // ListTile(
+                    //   title: CustomTextBox(
+                    //     textValue: 'Statistics',
+                    //     textSize: 5,
+                    //     textWeight: FontWeight.normal,
+                    //     typeAlign: Alignment.topLeft,
+                    //     captionAlign: TextAlign.left,
+                    //     textColor: black,
+                    //   ),
+                    //   onTap: () {
+                    //     Navigator.pop(context);
+                    //     Navigator.pushNamed(context, '/statistics');
+                    //   },
+                    // ),
                     userDetails.downloads == true
-                        ? ListTile(
-                            title: CustomTextBox(
-                              textValue: 'Downloads',
-                              textSize: 5,
-                              textWeight: FontWeight.normal,
-                              typeAlign: Alignment.topLeft,
-                              captionAlign: TextAlign.left,
-                              textColor: black,
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.pushNamed(context, '/downlaods');
-                            },
-                          )
+                        ? entitlement == Entitlement.allCourses
+                            ? ListTile(
+                                title: CustomTextBox(
+                                  textValue: 'Downloads',
+                                  textSize: 5,
+                                  textWeight: FontWeight.normal,
+                                  typeAlign: Alignment.topLeft,
+                                  captionAlign: TextAlign.left,
+                                  textColor: black,
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.pushNamed(context, '/downlaods');
+                                },
+                              )
+                            : ListTile(
+                                title: CustomTextBox(
+                                  textValue: 'Downloads',
+                                  textSize: 5,
+                                  textWeight: FontWeight.normal,
+                                  typeAlign: Alignment.topLeft,
+                                  captionAlign: TextAlign.left,
+                                  textColor: black,
+                                ),
+                                onTap: () async {
+                                  // Navigator.pop(context);
+                                  showModalBottomSheet(
+                                    isScrollControlled: true,
+                                    context: context,
+                                    backgroundColor: white,
+                                    builder: (BuildContext context) {
+                                      return Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            20.0, 20.0, 20.0, 40.0),
+                                        child: SizedBox(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Text(
+                                                  "You want to subscribe to activate this service"),
+                                              const SizedBox(height: 20.0),
+                                              PositiveElevatedButton(
+                                                label: "Buy Subscription",
+                                                onPressed: () async {
+                                                  try {
+                                                    Offerings offerings =
+                                                        await Purchases
+                                                            .getOfferings();
+                                                    PurchaserInfo
+                                                        purchaserInfo =
+                                                        await Purchases
+                                                            .purchasePackage(
+                                                                offerings
+                                                                    .current!
+                                                                    .availablePackages[0]);
+
+                                                    if (purchaserInfo
+                                                        .entitlements
+                                                        .all["Starter"]!
+                                                        .isActive) {
+                                                      // Unlock that great "pro" content
+                                                      print("Unlocked");
+                                                    }
+                                                  } on PlatformException catch (e) {
+                                                    var errorCode =
+                                                        PurchasesErrorHelper
+                                                            .getErrorCode(e);
+                                                    if (errorCode !=
+                                                        PurchasesErrorCode
+                                                            .purchaseCancelledError) {
+                                                      print(e);
+                                                    }
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              )
                         : const SizedBox(),
                     ListTile(
                       title: CustomTextBox(
@@ -348,32 +765,30 @@ class _AdminHomeState extends State<AdminHome> {
                           child: Column(
                             children: [
                               SizedBox(height: height * 1),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  CustomTextBox(
-                                    textValue: 'Capital',
-                                    textSize: 5.0,
-                                    textWeight: FontWeight.normal,
-                                    typeAlign: Alignment.topLeft,
-                                    captionAlign: TextAlign.left,
-                                    textColor: black,
-                                  ),
-                                  CustomTextBox(
-                                    textValue: userDetails.currency! +
-                                        " " +
-                                        userDetails.capitalAmount!
-                                            .toStringAsFixed(2),
-                                    textSize: 5.0,
-                                    textWeight: FontWeight.bold,
-                                    typeAlign: Alignment.topLeft,
-                                    captionAlign: TextAlign.left,
-                                    textColor: black,
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: height * 1),
+                              // Row(
+                              //   mainAxisAlignment:
+                              //       MainAxisAlignment.spaceBetween,
+                              //   children: [
+                              //     CustomTextBox(
+                              //       textValue: 'Capital',
+                              //       textSize: 4.0,
+                              //       textWeight: FontWeight.normal,
+                              //       typeAlign: Alignment.topLeft,
+                              //       captionAlign: TextAlign.left,
+                              //       textColor: secondaryColor,
+                              //     ),
+                              //     CustomTextBox(
+                              //       textValue:
+                              //           "+ ${userDetails.currency!} ${userDetails.capitalAmount!.toStringAsFixed(2)}",
+                              //       textSize: 4.0,
+                              //       textWeight: FontWeight.bold,
+                              //       typeAlign: Alignment.topLeft,
+                              //       captionAlign: TextAlign.left,
+                              //       textColor: secondaryColor,
+                              //     ),
+                              //   ],
+                              // ),
+                              // SizedBox(height: height * 1),
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -387,11 +802,8 @@ class _AdminHomeState extends State<AdminHome> {
                                     textColor: secondaryColor,
                                   ),
                                   CustomTextBox(
-                                    textValue: "+ " +
-                                        userDetails.currency! +
-                                        " " +
-                                        userDetails.totalDeposits!
-                                            .toStringAsFixed(2),
+                                    textValue:
+                                        "+ ${userDetails.currency!} ${userDetails.totalDeposits!.toStringAsFixed(2)}",
                                     textSize: 4.0,
                                     textWeight: FontWeight.bold,
                                     typeAlign: Alignment.topLeft,
@@ -414,11 +826,8 @@ class _AdminHomeState extends State<AdminHome> {
                                     textColor: secondaryColor,
                                   ),
                                   CustomTextBox(
-                                    textValue: "+ " +
-                                        userDetails.currency! +
-                                        " " +
-                                        userDetails.collectionTotal!
-                                            .toStringAsFixed(2),
+                                    textValue:
+                                        "+ ${userDetails.currency!} ${userDetails.collectionTotal!.toStringAsFixed(2)}",
                                     textSize: 4.0,
                                     textWeight: FontWeight.bold,
                                     typeAlign: Alignment.topLeft,
@@ -441,11 +850,8 @@ class _AdminHomeState extends State<AdminHome> {
                                     textColor: secondaryColor,
                                   ),
                                   CustomTextBox(
-                                    textValue: "- " +
-                                        userDetails.currency! +
-                                        " " +
-                                        userDetails.totalLoans!
-                                            .toStringAsFixed(2),
+                                    textValue:
+                                        "- ${userDetails.currency!} ${userDetails.totalLoans!.toStringAsFixed(2)}",
                                     textSize: 4.0,
                                     textWeight: FontWeight.bold,
                                     typeAlign: Alignment.topLeft,
@@ -468,10 +874,8 @@ class _AdminHomeState extends State<AdminHome> {
                                     textColor: secondaryColor,
                                   ),
                                   CustomTextBox(
-                                    textValue: "- " +
-                                        userDetails.currency! +
-                                        " " +
-                                        totalExpenses!.toStringAsFixed(2),
+                                    textValue:
+                                        "- ${userDetails.currency!} ${totalExpenses!.toStringAsFixed(2)}",
                                     textSize: 4.0,
                                     textWeight: FontWeight.bold,
                                     typeAlign: Alignment.topLeft,
@@ -481,10 +885,44 @@ class _AdminHomeState extends State<AdminHome> {
                                 ],
                               ),
                               SizedBox(height: height * 1),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  CustomTextBox(
+                                    textValue: 'Balance',
+                                    textSize: 5.0,
+                                    textWeight: FontWeight.bold,
+                                    typeAlign: Alignment.topLeft,
+                                    captionAlign: TextAlign.left,
+                                    textColor: black,
+                                  ),
+                                  CustomTextBox(
+                                    textValue:
+                                        "${userDetails.currency!} ${(userDetails.capitalAmount! + userDetails.totalDeposits! + userDetails.collectionTotal!).toStringAsFixed(2)}",
+                                    textSize: 5.0,
+                                    textWeight: FontWeight.bold,
+                                    typeAlign: Alignment.topLeft,
+                                    captionAlign: TextAlign.left,
+                                    textColor: black,
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: height * 1),
                             ],
                           ),
                         ),
                       ),
+                      entitlement == Entitlement.allCourses
+                          ? const SizedBox()
+                          : _ad != null
+                              ? Container(
+                                  width: _ad!.size.width.toDouble(),
+                                  height: 72.0,
+                                  alignment: Alignment.center,
+                                  child: AdWidget(ad: _ad!),
+                                )
+                              : const SizedBox(),
                       SizedBox(height: height * 3),
                       SizedBox(
                         child: SingleChildScrollView(
@@ -493,38 +931,56 @@ class _AdminHomeState extends State<AdminHome> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               SizedBox(
-                                width: width * 35,
-                                child: TextFormField(
-                                  onChanged: ((value) {
-                                    setState(() {
-                                      searchString = value;
-                                    });
-                                  }),
+                                width: width * 45,
+                                child: TextField(
                                   decoration: InputDecoration(
-                                    hintText: "Search by ID",
-                                    suffix: IconButton(
-                                      splashRadius: 15,
-                                      onPressed: () {
-                                        searchStringArray =
-                                            searchString!.trim().split("");
-                                        print(searchStringArray);
-                                      },
-                                      icon: Icon(Icons.search),
+                                    suffixIcon: const Icon(Icons.search),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
                                     ),
+                                    filled: true,
+                                    hintStyle:
+                                        TextStyle(color: Colors.grey[800]),
+                                    hintText: "Cus. name",
+                                    fillColor: Colors.white70,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 15.0, vertical: 0),
                                   ),
-                                  style: TextStyle(fontSize: width * 4),
+                                  onChanged: (value) => setState(() {
+                                    searchString = value;
+                                  }),
                                 ),
+                                // TextFormField(
+                                //   onChanged: ((value) {
+                                //     setState(() {
+                                //       searchString = value;
+                                //     });
+                                //   }),
+                                //   decoration: InputDecoration(
+                                //     hintText: "Search by name",
+                                //     suffix: IconButton(
+                                //       splashRadius: 15,
+                                //       onPressed: () {
+                                //         searchStringArray =
+                                //             searchString!.trim().split("");
+                                //         print(searchStringArray);
+                                //       },
+                                //       icon: const Icon(Icons.search),
+                                //     ),
+                                //   ),
+                                //   style: TextStyle(fontSize: width * 4),
+                                // ),
                               ),
                               SizedBox(width: width * 5),
-                              CustomTextBox(
-                                textValue: 'Loan Types',
-                                textSize: 4,
-                                textWeight: FontWeight.normal,
-                                typeAlign: Alignment.topLeft,
-                                captionAlign: TextAlign.left,
-                                textColor: secondaryColor,
-                              ),
-                              SizedBox(width: width * 5),
+                              // CustomTextBox(
+                              //   textValue: 'Loan Types',
+                              //   textSize: 4,
+                              //   textWeight: FontWeight.normal,
+                              //   typeAlign: Alignment.topLeft,
+                              //   captionAlign: TextAlign.left,
+                              //   textColor: secondaryColor,
+                              // ),
+                              // SizedBox(width: width * 5),
                               Container(
                                 width: width * 35,
                                 height: height * 4,
@@ -594,9 +1050,9 @@ class _AdminHomeState extends State<AdminHome> {
                                               ? "Monthly"
                                               : null)
                                   .where('searchQuery',
-                                      isEqualTo: searchString!.isEmpty
+                                      arrayContainsAny: searchString!.isEmpty
                                           ? null
-                                          : searchString)
+                                          : [searchString!.toLowerCase()])
                                   .get(),
                               // initialData: InitialData,
                               builder: (BuildContext context,

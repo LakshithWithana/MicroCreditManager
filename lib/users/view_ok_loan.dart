@@ -1,17 +1,18 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:date_time_picker/date_time_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:mcm/models/user_model.dart';
 import 'package:mcm/reusable_components/custom_elevated_buttons.dart';
-import 'package:mcm/reusable_components/custom_text_form_field.dart';
 import 'package:mcm/reusable_components/loading.dart';
 import 'package:mcm/services/database_services.dart';
 import 'package:mcm/shared/colors.dart';
 import 'package:mcm/shared/text.dart';
 import 'package:provider/provider.dart';
+
+import '../reusable_components/custom_text_form_field.dart';
 
 class ViewOkLoanArgs {
   final QueryDocumentSnapshot? loan;
@@ -20,7 +21,7 @@ class ViewOkLoanArgs {
 }
 
 class ViewOkLoan extends StatefulWidget {
-  ViewOkLoan({Key? key}) : super(key: key);
+  const ViewOkLoan({Key? key}) : super(key: key);
 
   @override
   State<ViewOkLoan> createState() => _ViewOkLoanState();
@@ -50,6 +51,11 @@ class _ViewOkLoanState extends State<ViewOkLoan> {
   int? day = 0;
 
   Object? collectingDates = {};
+
+  final dateController = TextEditingController();
+  final reasonController = TextEditingController();
+  String? startDate = "";
+  String? endDate = "";
 
   @override
   Widget build(BuildContext context) {
@@ -239,8 +245,7 @@ class _ViewOkLoanState extends State<ViewOkLoan> {
                                     textColor: black,
                                   ),
                                   CustomTextBox(
-                                    textValue:
-                                        loan['interestRate'].toString() + " %",
+                                    textValue: "${loan['interestRate']} %",
                                     textSize: 4.0,
                                     textWeight: FontWeight.normal,
                                     typeAlign: Alignment.topLeft,
@@ -341,11 +346,9 @@ class _ViewOkLoanState extends State<ViewOkLoan> {
                                     textColor: black,
                                   ),
                                   CustomTextBox(
-                                    textValue: "x " +
-                                        (int.parse((loan['duration'])!
-                                                .split(' ')
-                                                .first))
-                                            .toString(),
+                                    textValue: loan['loanType'] == "Monthly"
+                                        ? "x ${int.parse((loan['duration'])!.split(' ').first)}"
+                                        : "x ${int.parse((loan['duration'])!.split(' ').first) * 30}",
                                     textSize: 4.0,
                                     textWeight: FontWeight.normal,
                                     typeAlign: Alignment.topLeft,
@@ -361,6 +364,32 @@ class _ViewOkLoanState extends State<ViewOkLoan> {
                                 children: [
                                   CustomTextBox(
                                     textValue: 'Total',
+                                    textSize: 4.5,
+                                    textWeight: FontWeight.normal,
+                                    typeAlign: Alignment.topLeft,
+                                    captionAlign: TextAlign.left,
+                                    textColor: black,
+                                  ),
+                                  CustomTextBox(
+                                    textValue: loan['currency'] +
+                                        " " +
+                                        loan['totalCollection']
+                                            .toStringAsFixed(2),
+                                    textSize: 4.5,
+                                    textWeight: FontWeight.normal,
+                                    typeAlign: Alignment.topLeft,
+                                    captionAlign: TextAlign.left,
+                                    textColor: green!,
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: height * 1),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  CustomTextBox(
+                                    textValue: 'Balance',
                                     textSize: 5.0,
                                     textWeight: FontWeight.bold,
                                     typeAlign: Alignment.topLeft,
@@ -370,7 +399,7 @@ class _ViewOkLoanState extends State<ViewOkLoan> {
                                   CustomTextBox(
                                     textValue: loan['currency'] +
                                         " " +
-                                        loan['totalCollection'].toString(),
+                                        loan['balance'].toStringAsFixed(2),
                                     textSize: 5.0,
                                     textWeight: FontWeight.bold,
                                     typeAlign: Alignment.topLeft,
@@ -412,7 +441,206 @@ class _ViewOkLoanState extends State<ViewOkLoan> {
                       PositiveElevatedButton(
                         label: 'Contact Company',
                         onPressed: () {
-                          print(collectionHistory);
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return StatefulBuilder(
+                                builder: (BuildContext context, setState) {
+                                  return BottomSheet(
+                                    enableDrag: false,
+                                    onClosing: () {
+                                      reasonController.clear();
+                                    },
+                                    builder: (context) {
+                                      return Container(
+                                        height: height * 65,
+                                        color: white,
+                                        child: Padding(
+                                          padding: EdgeInsets.all(width * 5.1),
+                                          child: SingleChildScrollView(
+                                            child: Column(
+                                              children: [
+                                                CustomTextBox(
+                                                  textValue: 'Contact Company',
+                                                  textSize: 7,
+                                                  textWeight: FontWeight.bold,
+                                                  typeAlign: Alignment.topLeft,
+                                                  captionAlign: TextAlign.left,
+                                                  textColor: black,
+                                                ),
+                                                SizedBox(height: height * 3),
+                                                CustomTextBox(
+                                                  textValue:
+                                                      'Send request to get extention time',
+                                                  textSize: 5,
+                                                  textWeight: FontWeight.normal,
+                                                  typeAlign: Alignment.topLeft,
+                                                  captionAlign: TextAlign.left,
+                                                  textColor: black,
+                                                ),
+                                                SizedBox(height: height * 2),
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    CustomTextBox(
+                                                      textValue:
+                                                          'Starting date:',
+                                                      textSize: 5,
+                                                      textWeight:
+                                                          FontWeight.normal,
+                                                      typeAlign:
+                                                          Alignment.topLeft,
+                                                      captionAlign:
+                                                          TextAlign.left,
+                                                      textColor: black,
+                                                    ),
+                                                    SizedBox(
+                                                      width: width * 40,
+                                                      child: DateTimePicker(
+                                                        icon: const Icon(Icons
+                                                            .calendar_month),
+                                                        initialValue: DateTime
+                                                                .now()
+                                                            // .subtract(
+                                                            //     const Duration(
+                                                            //         days: 30))
+                                                            .toString(),
+                                                        firstDate:
+                                                            DateTime(2000),
+                                                        lastDate:
+                                                            DateTime(2100),
+                                                        onChanged: (val) {
+                                                          setState(() {
+                                                            startDate = val;
+                                                          });
+                                                        },
+                                                        validator: (val) {
+                                                          print(val);
+
+                                                          return null;
+                                                        },
+                                                        onSaved: (val) {
+                                                          setState(() {
+                                                            startDate = val;
+                                                          });
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    CustomTextBox(
+                                                      textValue: 'Ending date:',
+                                                      textSize: 5,
+                                                      textWeight:
+                                                          FontWeight.normal,
+                                                      typeAlign:
+                                                          Alignment.topLeft,
+                                                      captionAlign:
+                                                          TextAlign.left,
+                                                      textColor: black,
+                                                    ),
+                                                    SizedBox(
+                                                      width: width * 40,
+                                                      child: DateTimePicker(
+                                                        icon: const Icon(Icons
+                                                            .calendar_month),
+                                                        initialValue:
+                                                            DateTime.now()
+                                                                .toString(),
+                                                        firstDate:
+                                                            DateTime.now(),
+                                                        lastDate:
+                                                            DateTime(2100),
+                                                        onChanged: (val) {
+                                                          print(val);
+                                                          setState(() {
+                                                            endDate = val;
+                                                          });
+                                                        },
+                                                        validator: (val) {
+                                                          return null;
+                                                        },
+                                                        onSaved: (val) {
+                                                          setState(() {
+                                                            endDate = val;
+                                                          });
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                CustomTextFormField(
+                                                  label: 'Reason',
+                                                  controller: reasonController,
+                                                ),
+                                                SizedBox(height: height * 5),
+                                                PositiveElevatedButton(
+                                                  label: 'Send to Company',
+                                                  onPressed: () {
+                                                    FirebaseFirestore.instance
+                                                        .collection(
+                                                            "loanExtentionRequests")
+                                                        .add({
+                                                      "loanId": args.loan!.id,
+                                                      "startingDate": startDate,
+                                                      "endingDate": endDate,
+                                                      "reason":
+                                                          reasonController.text,
+                                                      "status": "pending",
+                                                      "duration": (DateTime(
+                                                                      int.parse(endDate!
+                                                                          .split(
+                                                                              '-')
+                                                                          .first),
+                                                                      int.parse(
+                                                                          endDate!.split('-')[
+                                                                              1]),
+                                                                      int.parse(endDate!
+                                                                          .split(
+                                                                              '-')
+                                                                          .last))
+                                                                  .difference(DateTime(
+                                                                      int.parse(startDate!
+                                                                          .split(
+                                                                              '-')
+                                                                          .first),
+                                                                      int.parse(
+                                                                          startDate!
+                                                                              .split('-')[1]),
+                                                                      int.parse(startDate!.split('-').last)))
+                                                                  .inHours /
+                                                              24)
+                                                          .round()
+                                                    }).then((value) {
+                                                      setState(() {
+                                                        startDate = "";
+                                                        endDate = "";
+                                                        reasonController
+                                                            .clear();
+                                                      });
+                                                      Navigator.pop(context);
+                                                    });
+                                                  },
+                                                ),
+                                                SizedBox(height: height * 5),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          );
                         },
                       ),
                       SizedBox(height: height * 10),
@@ -475,7 +703,7 @@ Widget getRowWidget(List<MapEntry<String, dynamic>> singleRow) {
                   textColor: black,
                 ),
                 CustomTextBox(
-                  textValue: item.value == false ? 'Awaiting' : 'Paid',
+                  textValue: item.value.toString(),
                   textSize: 4.0,
                   textWeight: FontWeight.normal,
                   typeAlign: Alignment.topLeft,

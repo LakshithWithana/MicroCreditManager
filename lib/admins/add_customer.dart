@@ -15,10 +15,9 @@ import 'package:mcm/shared/colors.dart';
 import 'package:mcm/shared/text.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import 'package:uuid/uuid_util.dart';
 
 class AddCustomer extends StatefulWidget {
-  AddCustomer({Key? key}) : super(key: key);
+  const AddCustomer({Key? key}) : super(key: key);
 
   @override
   _AddCustomerState createState() => _AddCustomerState();
@@ -36,7 +35,7 @@ class _AddCustomerState extends State<AddCustomer> {
   final amountController = TextEditingController();
   String? fbPassword = "";
   String? amount = "0";
-  var accountUid = Uuid();
+  var accountUid = const Uuid();
   String? userId = "";
   String? accountId = "";
   String? adminIdFromAdminProfile = "";
@@ -58,7 +57,7 @@ class _AddCustomerState extends State<AddCustomer> {
 
     /// random pin generator
     String? randomPinGenerator() {
-      var rng = new Random();
+      var rng = Random();
       int randomNumber = rng.nextInt(99999) + 99999;
       return randomNumber.toString();
     }
@@ -103,7 +102,7 @@ class _AddCustomerState extends State<AddCustomer> {
           fbPassword = randomPassword!;
         });
         final sendReport = await send(message, smtpServer);
-        print('Message sent: ' + sendReport.toString());
+        print('Message sent: $sendReport');
       } on MailerException catch (e) {
         print('Message not sent.');
 
@@ -117,14 +116,19 @@ class _AddCustomerState extends State<AddCustomer> {
 
     /// customer id creation
     String? customerIdGenerator(String? adminId, int? accountCount) {
-      String? customerId = adminId!.split('A').first +
-          "CST" +
-          adminId.split('M').last.split('-').first +
-          "-" +
-          accountCount!.toString() +
-          "-" +
-          (DateTime.now().millisecondsSinceEpoch).toString().substring(8);
+      String? customerId =
+          "${adminId!.split('A').first}CST${adminId.split('M').last.split('-').first}-${accountCount!}-${(DateTime.now().millisecondsSinceEpoch).toString().substring(8)}";
       return customerId;
+    }
+
+    setSearchParam(String customerID) {
+      List<String> customerSearchList = [];
+      String temp = "";
+      for (int i = 0; i < customerID.length; i++) {
+        temp = temp + customerID[i];
+        customerSearchList.add(temp);
+      }
+      return customerSearchList;
     }
 
     return StreamBuilder<UserDetails>(
@@ -322,6 +326,15 @@ class _AddCustomerState extends State<AddCustomer> {
                               captionAlign: TextAlign.left,
                               textColor: accentColor,
                             ),
+                            CustomTextBox(
+                              textValue:
+                                  'Password is "Password", inform your client to change it after login.',
+                              textSize: 4.0,
+                              textWeight: FontWeight.normal,
+                              typeAlign: Alignment.center,
+                              captionAlign: TextAlign.left,
+                              textColor: black,
+                            ),
                             SizedBox(height: height * 8),
                             loading == true
                                 ? const Center(
@@ -380,8 +393,8 @@ class _AddCustomerState extends State<AddCustomer> {
                                               .validate()) {
                                             await sendEmail(
                                                 email: emailController.text,
-                                                randomPassword:
-                                                    randomPinGenerator(),
+                                                randomPassword: "Password",
+                                                // randomPinGenerator(),
                                                 role: "Customer");
 
                                             await userRequestsCollection
@@ -396,7 +409,7 @@ class _AddCustomerState extends State<AddCustomer> {
                                                   nicNumberController.text,
                                               'companyName':
                                                   userDetails.companyName,
-                                              'password': fbPassword,
+                                              'password': "Password",
                                               'accountUid': accountId,
                                               'accountType': "Real",
                                               'amount': amount,
@@ -405,6 +418,8 @@ class _AddCustomerState extends State<AddCustomer> {
                                               'currency': userDetails.currency,
                                               'createdDate': formattedDate,
                                               'userId': userId,
+                                              'searchQuery': setSearchParam(
+                                                  "${firstNameController.text.toLowerCase()} ${lastNameController.text.toLowerCase()}"),
                                             });
                                             await userIdsCollection.doc().set({
                                               'id': userId,
@@ -457,7 +472,7 @@ class _AddCustomerState extends State<AddCustomer> {
               ),
             );
           } else {
-            return Loading();
+            return const Loading();
           }
         });
   }
